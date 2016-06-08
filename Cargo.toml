@@ -1,0 +1,13 @@
+[package]
+name = "command-macros"
+version = "0.1.0"
+authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
+
+[lib]
+crate-type = ["dylib"]
+
+[features]
+nightly = []
+
+[dependencies]
+
