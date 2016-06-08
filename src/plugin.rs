@@ -2,6 +2,7 @@ use syntax::ptr::P;
 use syntax::codemap::Span;
 use syntax::parse::token::{self, Lit, Token, DelimToken};
 use syntax::parse::token::keywords;
+use syntax::parse::token::intern_and_get_ident;
 use syntax::parse::parser::Restrictions;
 use syntax::ast::{TokenTree, LitKind, Expr, Stmt, Block, Pat};
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
@@ -44,19 +45,6 @@ enum Tree<'a> {
     Match(Vec<(&'a [TokenTree], Vec<Tree<'a>>)>),
 }
 
-fn leak_str(string: &str) -> token::InternedString {
-    token::InternedString::new(unsafe {
-        let to_leak = string.to_owned();
-        let ss = {
-            let s: &str = &to_leak[..];
-            let ss: &'static str = ::std::mem::transmute(s);
-            ss
-        };
-        ::std::mem::forget(to_leak);
-        ss
-    })
-}
-
 fn generate(cx: &mut ExtCtxt, span: Span, mut trees: Vec<Tree>) -> Result<P<Block>, ()> {
     if trees.is_empty() {
         cx.span_err(span, "This macro needs at least the command name");
@@ -65,7 +53,7 @@ fn generate(cx: &mut ExtCtxt, span: Span, mut trees: Vec<Tree>) -> Result<P<Bloc
 
     let cmd_expr = match trees.remove(0) {
         Tree::String(span, string) => {
-            let str_lit = cx.expr_str(span, leak_str(&string));
+            let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
             quote_expr!(cx, ::std::process::Command::new($str_lit))
         }
         Tree::Arg(e) => quote_expr!(cx, ::std::process::Command::new($e)),
@@ -86,7 +74,7 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Tree>) -> Result<Vec<Stmt>, ()> {
     trees.into_iter().map(|tree| {
         let x = match tree {
             Tree::String(span, string) => {
-                let str_lit = cx.expr_str(span, leak_str(&string));
+                let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
                 quote_expr!(cx, cmd.arg($str_lit))
             }
             Tree::Arg(e) => quote_expr!(cx, cmd.arg(&$e)),
