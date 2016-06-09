@@ -72,7 +72,7 @@ macro_rules! cmd {
                   } $($tail)*)
         } 
     };
-    ({$e:expr} if let $p:pat = ($m:expr) { $($then:tt)* } S$($tail:tt)*) => {
+    ({$e:expr} if let $p:pat = ($m:expr) { $($then:tt)* } $($tail:tt)*) => {
         cmd!( {$e}if let $p = ($m) { $($then)* } else {} $($tail)* )
     };
 
@@ -91,16 +91,12 @@ macro_rules! cmd {
 
     // naked ident
     ({$e:expr} $a:ident $($tail:tt)*) => (cmd!( {$e} (stringify!($a)) $($tail)* ));
-    // String case
-    // ({$e:expr}  $a:tt $($tail:tt)*) => (cmd!( {$e} ($a) $($tail)* ));
 
     // Main entry points (command name)
     (($c:expr) $($tail:tt)*) => {
         cmd!( {::std::process::Command::new(&$c)} $($tail)* )
     };
     ($c:ident $($tail:tt)*) => (cmd!( (stringify!($c)) $($tail)* ));
-    // String case
-    // ($c:tt $($tail:tt)*) => (cmd!( ($c) $($tail)* ));
 }
 
 #[cfg(test)]
@@ -179,14 +175,13 @@ fn match_test() {
 
 #[test]
 fn iflet() {
-    // let option = Some(5);
-    // // TODO
-    // quicktest(
-    //     cmd!(echo
-    //         if let Some(x) = (option) {("--number") (x.to_string())}
-    //         tail),
-    //     "--number 5 tail"
-    // );
+    let option = Some(5);
+    quicktest(
+        cmd!(echo
+            if let Some(x) = (option) {("--number") (x.to_string())}
+            tail),
+        "--number 5 tail"
+    );
 
     let option: Option<()> = None;
     quicktest(
