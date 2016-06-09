@@ -86,4 +86,18 @@ mod plugin {
         quicktest(command![e("ch")(('o')) number((2+2))], "number4");
         quicktest(command![echo ("abc")-((5))-def.txt hij], "abc-5-def.txt hij");
     }
+
+    #[test]
+    fn for_loop() {
+        quicktest(command![
+                echo
+                for (i, x) in ["a", "b"].iter().enumerate() {
+                    --add ((i+1)).(x).txt
+                }
+                end
+            ],
+            "--add 1.a.txt --add 2.b.txt end"
+        );
+        quicktest(command!(echo for-me), "for-me");
+    }
 }

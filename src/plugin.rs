@@ -40,6 +40,7 @@ enum Tree {
     Touching(Vec<Spanned<Tree>>), // Should not contain Tree::Touching variant
     If(Condition, Vec<Spanned<Tree>>, Vec<Spanned<Tree>>),
     Match(P<Expr>, Vec<Spanned<(Vec<P<Pat>>, Option<P<Expr>>, Vec<Spanned<Tree>>)>>),
+    For(P<Pat>, P<Expr>, Vec<Spanned<Tree>>),
 }
 
 fn get_trees_span(trees: &[Spanned<Tree>]) -> Span {
@@ -122,6 +123,10 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
                     Condition::IfLet(p, e) => quote_expr!(cx, if let $p = $e $then else $els)
                 }
             }
+            Tree::For(pat, expr, body) => {
+                let body = generate_block(cx, body)?;
+                quote_expr!(cx, for $pat in $expr $body)
+            }
         };
         Ok(cx.stmt_expr(x))
     }).collect()
@@ -198,6 +203,8 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             self.parse_if()
         } else if self.p.check_keyword(keywords::Match) {
             self.parse_match()
+        } else if self.p.check_keyword(keywords::For) {
+            self.parse_for()
         } else if self.check_opening() {
             self.parse_splice()
         } else {
@@ -380,6 +387,25 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             }
         }
         Ok(respan(span_from_to(match_kw_span, delimited.close_span), Tree::Match(expr, arms)))
+    }
+
+    // Assumes the fist token is for keyword
+    fn parse_for(&mut self) -> Result<Spanned<Tree>, ()> {
+        let for_kw_span = self.p.span;
+        if !self.parse_naked_keyword()? {
+            return self.parse_word("for".into());
+        }
+
+        let pat = self.p.parse_pat().map_err(|e| {e}.emit())?;
+        self.p.expect_keyword(keywords::In).map_err(|e| {e}.emit())?;
+        let expr = self.p.parse_expr_res(Restrictions::RESTRICTION_NO_STRUCT_LITERAL, None)
+            .map_err(|mut e| e.emit())?;
+
+        let body = self.parse_block()?;
+        Ok(respan(
+            span_from_to(for_kw_span, self.p.last_span),
+            Tree::For(pat, expr, body)
+        ))
     }
 
     fn parse_block(&mut self) -> Result<Vec<Spanned<Tree>>, ()> {

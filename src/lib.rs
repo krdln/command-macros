@@ -99,6 +99,15 @@ macro_rules! cmd {
         cmd!( {$e}if ($b) { $($then)* } else {} $($tail)* )
     };
 
+    // for
+    ({$e:expr} for $p:pat in ($i:expr) { $($body:tt)* } $($tail:tt)*) => {
+        {
+            let mut cmd = $e;
+            for $p in $i { cmd = cmd!( {cmd} $($body)* ); }
+            cmd
+        }
+    };
+
     // naked ident
     ({$e:expr} $a:ident $($tail:tt)*) => (cmd!( {$e} (stringify!($a)) $($tail)* ));
 
@@ -236,6 +245,19 @@ fn test_parenparen() {
     quicktest(cmd!( echo ((2+2)) ), "4");
     let foo = || "a";
     quicktest(cmd!( echo ((foo)()) ), "a");
+}
+
+#[test]
+fn for_loop() {
+    quicktest(cmd!(
+            echo
+            for x in (&["a", "b"]) {
+                foo (x)
+            }
+            end
+        ),
+        "foo a foo b"
+    );
 }
 
 
