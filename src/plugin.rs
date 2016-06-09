@@ -1,5 +1,5 @@
 use syntax::ptr::P;
-use syntax::codemap::Span;
+use syntax::codemap::{Span, Spanned, respan, DUMMY_SP};
 use syntax::parse::token::{self, Lit, Token, DelimToken};
 use syntax::parse::token::keywords;
 use syntax::parse::token::intern_and_get_ident;
@@ -36,23 +36,33 @@ impl Condition {
     }
 }
 
-enum Tree<'a> {
-    String(Span, String),
+fn span_from_to(from: Span, to: Span) -> Span {
+    Span{hi: to.hi, ..from}
+}
+
+enum Tree {
+    String(String),
     Arg(P<Expr>),
     Args(P<Expr>),
     Cmd(P<Expr>),
-    If(Condition, Vec<Tree<'a>>, Vec<Tree<'a>>),
-    Match(Vec<(&'a [TokenTree], Vec<Tree<'a>>)>),
+    If(Condition, Vec<Spanned<Tree>>, Vec<Spanned<Tree>>),
+    Match(Vec<(P<Pat>, Option<P<Expr>>, Vec<Spanned<Tree>>)>),
 }
 
-fn generate(cx: &mut ExtCtxt, span: Span, mut trees: Vec<Tree>) -> Result<P<Block>, ()> {
+fn get_trees_span(trees: &[Spanned<Tree>]) -> Span {
+    if trees.is_empty() { DUMMY_SP }
+    else { span_from_to(trees[0].span, trees.last().unwrap().span) }
+}
+
+fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result<P<Block>, ()> {
     if trees.is_empty() {
-        cx.span_err(span, "This macro needs at least the command name");
+        cx.span_err(sp, "This macro needs at least the command name");
         return Err(());
     }
 
-    let cmd_expr = match trees.remove(0) {
-        Tree::String(span, string) => {
+    let Spanned{span, node: cmd_tree} = trees.remove(0);
+    let cmd_expr = match cmd_tree {
+        Tree::String(string) => {
             let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
             quote_expr!(cx, ::std::process::Command::new($str_lit))
         }
@@ -70,26 +80,27 @@ fn generate(cx: &mut ExtCtxt, span: Span, mut trees: Vec<Tree>) -> Result<P<Bloc
     Ok(cx.block(span, stmts, Some(quote_expr!(cx, cmd))))
 }
 
-fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Tree>) -> Result<Vec<Stmt>, ()> {
-    trees.into_iter().map(|tree| {
+fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stmt>, ()> {
+    trees.into_iter().map(|Spanned{span, node: tree}| {
         let x = match tree {
-            Tree::String(span, string) => {
+            Tree::String(string) => {
                 let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
                 quote_expr!(cx, cmd.arg($str_lit))
             }
             Tree::Arg(e) => quote_expr!(cx, cmd.arg(&$e)),
             Tree::Args(e) => quote_expr!(cx, cmd.args(&$e)),
-            Tree::Cmd(e) => {
-                cx.span_err(e.span, "The {} mode doesn't make sense for arguments. Use () instead");
+            Tree::Cmd(_) => {
+                cx.span_err(span, "The {} mode doesn't make sense for arguments. Use () instead");
                 return Err(());
             }
             Tree::Match(..) => unimplemented!(),
             Tree::If(cond, then, els) => {
-                // FIXME wrong spans
+                let span = get_trees_span(&then);
                 let stmts = generate_inner(cx, then)?;
-                let then = cx.block(cond.get_span(), stmts, None);
+                let then = cx.block(span, stmts, None);
+                let span = get_trees_span(&els);
                 let stmts = generate_inner(cx, els)?;
-                let els = cx.block(cond.get_span(), stmts, None);
+                let els = cx.block(span, stmts, None);
                 match cond {
                     Condition::Bool(e) => quote_expr!(cx, if $e $then else $els),
                     Condition::IfLet(p, e) => quote_expr!(cx, if let $p = $e $then else $els)
@@ -122,7 +133,7 @@ fn stringify_token(cx: &mut ExtCtxt, tt: &TokenTree) -> Result<Option<String>, &
     Ok(None)
 }
 
-fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, ()> {
+fn parse(cx: &mut ExtCtxt, args: &[TokenTree]) -> Result<Vec<Spanned<Tree>>, ()> {
 
     if args.is_empty() { return Ok(vec![]) }
 
@@ -155,7 +166,7 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
     while let Some(&(ref group, i)) = groups_iter.next() {
         if let Some(start) = condition_start {
             match *group[0] {
-                TokenTree::Delimited(_, ref block) if block.delim == DelimToken::Brace => {
+                TokenTree::Delimited(then_span, ref block) if block.delim == DelimToken::Brace => {
                     condition_start = None;
                     let tts = &args[start..i];
                     let mut p = cx.new_parser_from_tts(tts);
@@ -193,11 +204,18 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
                             groups_iter.next();
                             match groups_iter.next().map(|&(ref tts, i)| (&tts[..], i)) {
                                 Some(([&TokenTree::Delimited(span, ref block)], _)) if block.delim == DelimToken::Brace => {
-                                    trees.push(Tree::If(condition, then, parse(cx, &block.tts)?));
+                                    trees.push(respan(
+                                        span_from_to(args[start - 1].get_span(), span),
+                                        Tree::If(condition, then, parse(cx, &block.tts)?),
+                                    ));
                                 }
                                 Some(([&TokenTree::Token(span, ref tok)], i)) if tok.is_keyword(keywords::If) => {
                                     let mut nested_trees = parse(cx, &args[i..])?;
-                                    trees.push(Tree::If(condition, then, vec![nested_trees.remove(0)]));
+                                    let parsed_else_block = nested_trees.remove(0);
+                                    trees.push(respan(
+                                        span_from_to(args[start - 1].get_span(), parsed_else_block.span),
+                                        Tree::If(condition, then, vec![parsed_else_block]),
+                                    ));
                                     trees.extend(nested_trees);
                                     break;
                                 }
@@ -207,7 +225,10 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
                                 }
                             }
                         }
-                        _ => trees.push(Tree::If(condition, then, vec![]))
+                        _ => trees.push(respan(
+                            span_from_to(args[start - 1].get_span(), then_span),
+                            Tree::If(condition, then, vec![]),
+                        ))
                     }
                 }
                 _ => ()
@@ -219,7 +240,7 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
             [&TokenTree::Delimited(span, ref delimited)] => {
                 if delimited.tts.is_empty() {
                     if delimited.delim == DelimToken::Brace && span.lo.0 + 2 == span.hi.0 {
-                        trees.push(Tree::String(span, "{}".into()));
+                        trees.push(respan(span, Tree::String("{}".into())));
                         continue;
                     } else {
                         cx.span_err(span, "Rust expression expected inside this block");
@@ -232,13 +253,13 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
                     Err(mut e) => { e.emit(); return Err(()) }
                 };
                 if p.token == Token::Eof {
-                    trees.push(
+                    trees.push(respan(span,
                         match delimited.delim {
                             DelimToken::Paren => Tree::Arg(expr),
                             DelimToken::Bracket => Tree::Args(expr),
                             DelimToken::Brace => Tree::Cmd(expr),
                         }
-                    );
+                    ));
                 } else {
                     cx.span_err(expr.span, "the expression ends too soon");
                     return Err(());
@@ -275,7 +296,7 @@ fn parse<'a>(cx: &mut ExtCtxt, args: &'a [TokenTree]) -> Result<Vec<Tree<'a>>, (
                 }
                 let mut span = group[0].get_span();
                 span.hi = group.last().unwrap().get_span().hi;
-                trees.push(Tree::String(span, word));
+                trees.push(respan(span, Tree::String(word)));
             }
         } // end match
     } // end for
