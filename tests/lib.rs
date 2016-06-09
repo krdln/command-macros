@@ -79,4 +79,11 @@ mod plugin {
     fn parenparen() {
         quicktest(command!(echo ((2+2))), "4");
     }
+
+    #[test]
+    fn touching() {
+        quicktest(command![echo number((2+2))], "number4");
+        quicktest(command![e("ch")(('o')) number((2+2))], "number4");
+        quicktest(command![echo ("abc")-((5))-def.txt hij], "abc-5-def.txt hij");
+    }
 }

@@ -37,6 +37,7 @@ enum Tree {
     AsOsStr(P<Expr>), // ((x))
     Args(P<Expr>), // [x]
     Cmd(P<Expr>), // {x}
+    Touching(Vec<Spanned<Tree>>), // Should not contain Tree::Touching variant
     If(Condition, Vec<Spanned<Tree>>, Vec<Spanned<Tree>>),
     Match(P<Expr>, Vec<Spanned<(Vec<P<Pat>>, Option<P<Expr>>, Vec<Spanned<Tree>>)>>),
 }
@@ -63,11 +64,10 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
         Ident::with_empty_ctxt(intern("new")),
     ]));
     let cmd_expr = match cmd_tree {
-        Tree::Word(string) => {
-            let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
-            cx.expr_call(span, new_expr, vec![str_lit])
+        Tree::Word(_) | Tree::ToStr(_) | Tree::AsOsStr(_) | Tree::Touching(_) => {
+            let e = generate_os_str(cx, respan(span, cmd_tree))?;
+            cx.expr_call(span, new_expr, vec![e])
         }
-        Tree::AsOsStr(e) => cx.expr_call(span, new_expr, vec![e]),
         Tree::Cmd(e) => e,
         _ => {
             cx.span_err(span, "Command name should be `cmd` `(cmd_name_expr)` or `{Command_expr}`");
@@ -87,21 +87,12 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
     let cmd_expr = quote_expr!(cx, cmd);
     let arg_ident = Ident::with_empty_ctxt(intern("arg"));
     let args_ident = Ident::with_empty_ctxt(intern("args"));
-    let to_string_ident = Ident::with_empty_ctxt(intern("to_string"));
 
     trees.into_iter().map(|Spanned{span, node: tree}| {
         let x = match tree {
-            Tree::Word(string) => {
-                let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
-                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![str_lit])
-            }
-            Tree::ToStr(e) => {
-                let to_string = cx.expr_method_call(span, e, to_string_ident, vec![]);
-                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![to_string])
-            }
-            Tree::AsOsStr(e) => {
-                let reffed = cx.expr_addr_of(span, e);
-                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![reffed])
+            Tree::Word(_) | Tree::ToStr(_) | Tree::AsOsStr(_) | Tree::Touching(_) => {
+                let arg = generate_os_str(cx, respan(span, tree))?;
+                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![arg])
             }
             Tree::Args(e) => {
                 let reffed = cx.expr_addr_of(span, e);
@@ -136,6 +127,33 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
     }).collect()
 }
 
+fn generate_os_str(cx: &mut ExtCtxt, Spanned{span, node: tree}: Spanned<Tree>) -> Result<P<Expr>, ()> {
+    let to_string_ident = Ident::with_empty_ctxt(intern("to_string"));
+    let s_expr = quote_expr!(cx, s);
+    let push_ident = Ident::with_empty_ctxt(intern("push"));
+    match tree {
+        Tree::Word(string) => Ok(cx.expr_str(span, intern_and_get_ident(&string))),
+        Tree::ToStr(e) => Ok(cx.expr_method_call(span, e, to_string_ident, vec![])),
+        Tree::AsOsStr(e) => Ok(cx.expr_addr_of(span, e)),
+        Tree::Touching(trees) => {
+            let mut stmts = vec![quote_stmt!(cx, let mut s = ::std::ffi::OsString::new()).unwrap()];
+            stmts.extend(trees.into_iter().map(|spanned_tree| {
+                let span = spanned_tree.span;
+                let inner_expr = generate_os_str(cx, spanned_tree)?;
+                let expr = cx.expr_method_call(span, s_expr.clone(), push_ident, vec![inner_expr]);
+                Ok(cx.stmt_expr(expr))
+            }).collect::<Result<Vec<_>,_>>()?);
+            let block = cx.block(span, stmts, Some(s_expr.clone()));
+            Ok(cx.expr_block(block))
+        }
+        _ => {
+            cx.span_err(span, "This is not string-like expression, it can't be inside multi-part word.\
+                               Please separate this by whitespace");
+            Err(())
+        }
+    }
+}
+
 fn generate_block(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<P<Block>, ()> {
     let span = get_trees_span(&trees);
     let stmts = generate_inner(cx, trees)?;
@@ -162,22 +180,29 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
     }
 
     fn parse_tree(&mut self) -> Result<Spanned<Tree>, ()> {
-        let tree =
-            if self.p.check_keyword(keywords::If) {
-                self.parse_if()
-            } else if self.p.check_keyword(keywords::Match) {
-                self.parse_match()
-            } else if self.check_opening() {
-                self.parse_splice()
-            } else {
-                self.parse_word(String::new())
-            }?
-        ;
-        if self.touches_next() {
-            self.cx.span_err(tree.span, "This argument should be separated by whitespace");
-            return Err(())
+        let tree = self.parse_single_tree()?;
+        if !self.touches_next() {
+            Ok(tree)
+        } else {
+            let mut trees = vec![tree];
+            while self.touches_next() {
+                trees.push(self.parse_single_tree()?);
+            }
+            Ok(respan(get_trees_span(&trees), Tree::Touching(trees)))
         }
-        Ok(tree)
+    }
+
+    // Never returns Tree::Touching
+    fn parse_single_tree(&mut self) -> Result<Spanned<Tree>, ()> {
+        if self.p.check_keyword(keywords::If) {
+            self.parse_if()
+        } else if self.p.check_keyword(keywords::Match) {
+            self.parse_match()
+        } else if self.check_opening() {
+            self.parse_splice()
+        } else {
+            self.parse_word(String::new())
+        }
     }
 
     fn check_opening(&self) -> bool {
@@ -192,22 +217,22 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
 
     fn parse_word(&mut self, already: String) -> Result<Spanned<Tree>, ()> {
         let start_span = self.p.span;
-        let word_span;
         let mut word = already;
         loop {
             if self.check_opening() {
-                return self.err_next("Parenthesized blocks have to be preceded by whitespace to avoid ambiguity")
+                break;
             }
             
-            let span = self.p.span;
             word.push_str(&self.parse_token_as_string()?);
 
             if !self.touches_next() {
-                word_span = span_from_to(start_span, span);
                 break;
             }
         }
-        Ok(respan(word_span, Tree::Word(word)))
+        Ok(respan(
+            span_from_to(start_span, self.p.last_span),
+            Tree::Word(word),
+        ))
     }
 
     fn parse_token_as_string(&mut self) -> Result<String, ()> {
