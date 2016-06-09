@@ -1,17 +1,17 @@
 use syntax::ptr::P;
 use syntax::codemap::{Span, Spanned, respan, DUMMY_SP};
-use syntax::parse::token::{self, Lit, Token, DelimToken};
+use syntax::parse::token::{Lit, Token, DelimToken};
 use syntax::parse::token::keywords;
-use syntax::parse::token::intern_and_get_ident;
-use syntax::parse::parser::Restrictions;
-use syntax::ast::{TokenTree, LitKind, Expr, Stmt, Block, Pat};
+use syntax::parse::token::{intern, intern_and_get_ident};
+use syntax::parse::parser::{self, Restrictions};
+use syntax::ast::{TokenTree, LitKind, Expr, Stmt, Block, Pat, Ident};
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder;  // trait for expr_usize
 
 pub fn expand_command(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
     -> Box<MacResult + 'static>
 {
-    let trees = match parse(cx, args) {
+    let trees = match Parser::new(cx, args).parse_trees() {
         Ok(t) => t,
         Err(()) => return DummyResult::expr(sp)
     };
@@ -27,21 +27,12 @@ enum Condition {
     IfLet(P<Pat>, P<Expr>),
 }
 
-impl Condition {
-    fn get_span(&self) -> Span {
-        match *self {
-            Condition::Bool(ref e) => e.span,
-            Condition::IfLet(ref p, _) => p.span,
-        }
-    }
-}
-
 fn span_from_to(from: Span, to: Span) -> Span {
     Span{hi: to.hi, ..from}
 }
 
 enum Tree {
-    String(String),
+    Word(String),
     Arg(P<Expr>),
     Args(P<Expr>),
     Cmd(P<Expr>),
@@ -61,13 +52,22 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
     }
 
     let Spanned{span, node: cmd_tree} = trees.remove(0);
+
+    // Not using quote for Command::new($e), because I want to put proper spans in expressions.
+    // let new_expr = quote_expr!(cx, ::std::process::Command::new);
+    let new_expr = cx.expr_path(cx.path_global(span, vec![
+        Ident::with_empty_ctxt(intern("std")),
+        Ident::with_empty_ctxt(intern("process")),
+        Ident::with_empty_ctxt(intern("Command")),
+        Ident::with_empty_ctxt(intern("new")),
+    ]));
     let cmd_expr = match cmd_tree {
-        Tree::String(string) => {
+        Tree::Word(string) => {
             let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
-            quote_expr!(cx, ::std::process::Command::new($str_lit))
+            cx.expr_call(span, new_expr, vec![str_lit])
         }
-        Tree::Arg(e) => quote_expr!(cx, ::std::process::Command::new($e)),
-        Tree::Cmd(e) => e.clone(),
+        Tree::Arg(e) => cx.expr_call(span, new_expr, vec![e]),
+        Tree::Cmd(e) => e,
         _ => {
             cx.span_err(span, "Command name should be `cmd` `(cmd_name_expr)` or `{Command_expr}`");
             return Err(());
@@ -81,14 +81,26 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
 }
 
 fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stmt>, ()> {
+
+    // Not using quote for cmd.arg(&$e), because I want to put proper spans in expressions.
+    let cmd_expr = quote_expr!(cx, cmd);
+    let arg_ident = Ident::with_empty_ctxt(intern("arg"));
+    let args_ident = Ident::with_empty_ctxt(intern("args"));
+
     trees.into_iter().map(|Spanned{span, node: tree}| {
         let x = match tree {
-            Tree::String(string) => {
+            Tree::Word(string) => {
                 let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
                 quote_expr!(cx, cmd.arg($str_lit))
             }
-            Tree::Arg(e) => quote_expr!(cx, cmd.arg(&$e)),
-            Tree::Args(e) => quote_expr!(cx, cmd.args(&$e)),
+            Tree::Arg(e) => {
+                let reffed = cx.expr_addr_of(span, e);
+                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![reffed])
+            }
+            Tree::Args(e) => {
+                let reffed = cx.expr_addr_of(span, e);
+                cx.expr_method_call(span, cmd_expr.clone(), args_ident, vec![reffed])
+            }
             Tree::Cmd(_) => {
                 cx.span_err(span, "The {} mode doesn't make sense for arguments. Use () instead");
                 return Err(());
@@ -111,201 +123,222 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
     }).collect()
 }
 
-fn stringify_token(cx: &mut ExtCtxt, tt: &TokenTree) -> Result<Option<String>, &'static str> {
-    let tts = unsafe { ::std::slice::from_raw_parts(tt, 1) };
-    if let TokenTree::Token(_, ref tok) = *tt {
-        if let Token::Literal(lit, _) = *tok {
+struct Parser<'a, 'b: 'a> {
+    cx: &'a mut ExtCtxt<'b>,
+    p: parser::Parser<'a>,
+}
+
+impl<'a, 'b: 'a> Parser<'a, 'b> {
+    pub fn new(cx: &'a mut ExtCtxt<'b>, tts: &'a[TokenTree]) -> Parser<'a, 'b> {
+        let p = cx.new_parser_from_tts(tts);
+        Parser { cx: cx, p: p }
+    }
+
+    pub fn parse_trees(&mut self) -> Result<Vec<Spanned<Tree>>, ()> {
+        let mut trees = vec![];
+        while self.p.token != Token::Eof {
+            trees.push(self.parse_tree()?)
+        }
+        Ok(trees)
+    }
+
+    fn parse_tree(&mut self) -> Result<Spanned<Tree>, ()> {
+        let tree =
+            if self.p.check_keyword(keywords::If) {
+                self.parse_if()
+            } else if self.p.check_keyword(keywords::Match) {
+                self.parse_match()
+            } else if self.check_opening() {
+                self.parse_splice()
+            } else {
+                self.parse_word(String::new())
+            }?
+        ;
+        if self.touches_next() {
+            self.cx.span_err(tree.span, "This argument should be separated by whitespace");
+            return Err(())
+        }
+        Ok(tree)
+    }
+
+    fn check_opening(&self) -> bool {
+        if let Token::OpenDelim(_) = self.p.token { true }
+        else { false }
+    }
+
+    fn touches_next(&self) -> bool {
+        if self.p.token == Token::Eof { false }
+        else { self.p.last_span.hi == self.p.span.lo }
+    }
+
+    fn parse_word(&mut self, already: String) -> Result<Spanned<Tree>, ()> {
+        let start_span = self.p.span;
+        let word_span;
+        let mut word = already;
+        loop {
+            if self.check_opening() {
+                return self.err_next("Parenthesized blocks have to be preceded by whitespace to avoid ambiguity")
+            }
+            
+            let span = self.p.span;
+            word.push_str(&self.parse_token_as_string()?);
+
+            if !self.touches_next() {
+                word_span = span_from_to(start_span, span);
+                break;
+            }
+        }
+        Ok(respan(word_span, Tree::Word(word)))
+    }
+
+    fn parse_token_as_string(&mut self) -> Result<String, ()> {
+        if let Token::Literal(lit, _) = self.p.token {
             match lit {
                 Lit::Char(..) | Lit::Str_(..) | Lit::StrRaw(..) => {
-                    let mut p = cx.new_parser_from_tts(tts);
-                    match p.parse_lit_token() {
-                        Ok(LitKind::Char(c)) => return Ok(Some(c.to_string())),
-                        Ok(LitKind::Str(s, _)) => return Ok(Some(s.to_string())),
+                    let span = self.p.span;
+                    let warn = |s: &mut Parser| {
+                        if s.touches_next() {
+                            s.cx.span_warn(
+                                span,
+                                "String literals should cover the whole word to avoid confusion"
+                            );
+                        }
+                    };
+                    warn(self);
+                    match self.p.parse_lit_token() {
+                        Ok(LitKind::Char(c)) => {
+                            warn(self);
+                            return Ok(c.to_string())
+                        }
+                        Ok(LitKind::Str(s, _)) => {
+                            warn(self);
+                            return Ok(s.to_string())
+                        }
                         _ => unreachable!()
                     }
                 }
-                Lit::Byte(..) => return Err("You can't use byte literals in this macro"),
-                Lit::ByteStr(..) | Lit::ByteStrRaw(..) => return Err("You can't use bytestring literals in this macro"),
+                Lit::Byte(..) => {
+                    return self.err_next("You can't use byte literals in this macro")
+                }
+                Lit::ByteStr(..) | Lit::ByteStrRaw(..) => {
+                    return self.err_next("You can't use bytestring literals in this macro")
+                }
                 _ => (),
             }
         }
+        let stringified = self.cx.parse_sess.codemap().span_to_snippet(self.p.span).unwrap();
+        self.p.bump();
+        Ok(stringified)
     }
-    Ok(None)
-}
-
-fn parse(cx: &mut ExtCtxt, args: &[TokenTree]) -> Result<Vec<Spanned<Tree>>, ()> {
-
-    if args.is_empty() { return Ok(vec![]) }
-
-
-    let mut groups = vec![(vec![&args[0]], 0)];
-    for (i, arg) in args.iter().enumerate().skip(1) {
-        let is_touching = {
-            let last = groups.last().unwrap().0.last().unwrap();
-            arg.get_span().lo.0 == last.get_span().hi.0 && {
-                for &tt in &[arg, last] {
-                    if let TokenTree::Delimited(span, _) = *tt {
-                        cx.span_err(
-                            span,
-                            "Parenthesized blocks have to be separated by whitespace to avoid ambiguity",
-                        );
-                        return Err(());
-                    }
-                }
-                true
+    
+    fn parse_naked_keyword(&mut self) -> Result<bool, ()> {
+        let span = self.p.span;
+        self.p.bump();
+        if self.touches_next() {
+            if self.check_opening() {
+                self.cx.span_err(
+                    span,
+                    "This keyword should be separated by whitespace or put in a string literal",
+                );
+                return Err(())
             }
-        };
-        if is_touching { groups.last_mut().unwrap().0.push(arg); }
-        else { groups.push((vec![arg], i)); }
+            Ok(false)
+        } else {
+            Ok(true)
+        }
     }
 
-    let mut condition_start = None;
-    let mut trees = vec![];
+    // Assumes the first token is if keyword
+    fn parse_if(&mut self) -> Result<Spanned<Tree>, ()> {
+        let if_span = self.p.span;
+        if !self.parse_naked_keyword()? {
+            return self.parse_word("if".into());
+        }
+        let condition = 
+            if self.p.eat_keyword(keywords::Let) {
+                let pat = self.p.parse_pat().map_err(|mut e| e.emit())?;
+                self.p.expect(&Token::Eq).map_err(|mut e| e.emit())?;
+                let expr = self.p.parse_expr_res(Restrictions::RESTRICTION_NO_STRUCT_LITERAL, None)
+                    .map_err(|mut e| e.emit())?;
 
-    let mut groups_iter = groups.iter();
-    while let Some(&(ref group, i)) = groups_iter.next() {
-        if let Some(start) = condition_start {
-            match *group[0] {
-                TokenTree::Delimited(then_span, ref block) if block.delim == DelimToken::Brace => {
-                    condition_start = None;
-                    let tts = &args[start..i];
-                    let mut p = cx.new_parser_from_tts(tts);
-                    let condition = if p.eat_keyword(keywords::Let) {
-                        let pat = match p.parse_pat() {
-                            Ok(pat) => pat,
-                            Err(mut e) => { e.emit(); return Err(()) }
-                        };
-                        if p.token == Token::Eq {
-                            p.bump();
-                        } else {
-                            cx.span_err(p.span, "`=` expected after if-let's pattern");
-                            return Err(());
-                        }
-                        match p.parse_expr() {
-                            Ok(e) => Condition::IfLet(pat, e),
-                            Err(mut e) => { e.emit(); return Err(()) }
-                        }
-                    } else {
-                        let expr = match p.parse_expr() {
-                            Ok(e) => e,
-                            Err(mut e) => { e.emit(); return Err(()) }
-                        };
-                        // if p.token == Token::OpenDelim(DelimToken::Brace) {
-                        if p.token == Token::Eof {
-                            Condition::Bool(expr)
-                        } else {
-                            cx.span_err(expr.span, "the expression ends too soon");
-                            return Err(());
-                        }
-                    };
-                    let then = parse(cx, &block.tts)?;
-                    match groups_iter.as_slice().first().map(|&(ref tts, _)| &tts[..]) {
-                        Some([&TokenTree::Token(else_span, ref tok)]) if tok.is_keyword(keywords::Else) => {
-                            groups_iter.next();
-                            match groups_iter.next().map(|&(ref tts, i)| (&tts[..], i)) {
-                                Some(([&TokenTree::Delimited(span, ref block)], _)) if block.delim == DelimToken::Brace => {
-                                    trees.push(respan(
-                                        span_from_to(args[start - 1].get_span(), span),
-                                        Tree::If(condition, then, parse(cx, &block.tts)?),
-                                    ));
-                                }
-                                Some(([&TokenTree::Token(span, ref tok)], i)) if tok.is_keyword(keywords::If) => {
-                                    let mut nested_trees = parse(cx, &args[i..])?;
-                                    let parsed_else_block = nested_trees.remove(0);
-                                    trees.push(respan(
-                                        span_from_to(args[start - 1].get_span(), parsed_else_block.span),
-                                        Tree::If(condition, then, vec![parsed_else_block]),
-                                    ));
-                                    trees.extend(nested_trees);
-                                    break;
-                                }
-                                _ => {
-                                    cx.span_err(else_span, "Expected {block} or `if ` after this else keyword");
-                                    return Err(());
-                                }
-                            }
-                        }
-                        _ => trees.push(respan(
-                            span_from_to(args[start - 1].get_span(), then_span),
-                            Tree::If(condition, then, vec![]),
-                        ))
-                    }
-                }
-                _ => ()
-            } // end match *group[0]
-            continue
-        } // end if let Some(start) = condition_start
+                Condition::IfLet(pat, expr)
+            } else {
+                let expr = self.p.parse_expr_res(Restrictions::RESTRICTION_NO_STRUCT_LITERAL, None)
+                    .map_err(|mut e| e.emit())?;
 
-        match &group[..] {
-            [&TokenTree::Delimited(span, ref delimited)] => {
-                if delimited.tts.is_empty() {
-                    if delimited.delim == DelimToken::Brace && span.lo.0 + 2 == span.hi.0 {
-                        trees.push(respan(span, Tree::String("{}".into())));
-                        continue;
-                    } else {
-                        cx.span_err(span, "Rust expression expected inside this block");
-                        return Err(())
-                    }
-                }
-                let mut p = cx.new_parser_from_tts(&delimited.tts);
-                let expr = match p.parse_expr() {
-                    Ok(e) => e,
-                    Err(mut e) => { e.emit(); return Err(()) }
-                };
-                if p.token == Token::Eof {
-                    trees.push(respan(span,
-                        match delimited.delim {
-                            DelimToken::Paren => Tree::Arg(expr),
-                            DelimToken::Bracket => Tree::Args(expr),
-                            DelimToken::Brace => Tree::Cmd(expr),
-                        }
-                    ));
+                Condition::Bool(expr)
+            }
+        ;
+        let then_block = self.parse_block()?;
+        let else_block =
+            if self.p.eat_keyword(keywords::Else) {
+                if self.p.check_keyword(keywords::If) {
+                    vec![self.parse_if()?]
                 } else {
-                    cx.span_err(expr.span, "the expression ends too soon");
-                    return Err(());
+                    self.parse_block()?
                 }
+            } else {
+                vec![]
             }
-            [&TokenTree::Token(span, ref tok)] if tok.is_keyword(keywords::If) => {
-                condition_start = Some(i+1);
-            }
-            [&TokenTree::Token(span, ref tok)] if tok.is_keyword(keywords::Match) => {
-                cx.span_err(span, "match is unimplemented");
-                return Err(());
-            }
-            _ => {
-                let mut word = String::new();
-                for &tt in group {
-                    match stringify_token(cx, tt) {
-                        Ok(Some(s)) => {
-                            if group.len() > 1 {
-                                cx.span_warn(
-                                    tt.get_span(),
-                                    "String literals should cover the whole argument to avoid confusion"
-                                );
-                            }
-                            word.push_str(&s);
-                        }
-                        Ok(None) => word.push_str(
-                            &cx.parse_sess.codemap().span_to_snippet(tt.get_span()).unwrap(),
-                        ),
-                        Err(e) => {
-                            cx.span_err(tt.get_span(), e);
-                            return Err(());
-                        }
-                    }
-                }
-                let mut span = group[0].get_span();
-                span.hi = group.last().unwrap().get_span().hi;
-                trees.push(respan(span, Tree::String(word)));
-            }
-        } // end match
-    } // end for
-
-    if let Some(i) = condition_start {
-        cx.span_err(args[i-1].get_span(), "No {block} was found for this if");
-        return Err(());
+        ;
+        Ok(respan(
+            span_from_to(if_span, self.p.last_span),
+            Tree::If(condition, then_block, else_block)
+        ))
     }
 
-    Ok(trees)
-}
+    fn parse_block(&mut self) -> Result<Vec<Spanned<Tree>>, ()> {
+        if self.p.check(&Token::OpenDelim(DelimToken::Brace)) {
+            let tt = self.p.parse_token_tree().unwrap();
+            if let TokenTree::Delimited(_, delimited) = tt {
+                Parser::new(self.cx, &delimited.tts).parse_trees()
+            } else {
+                unreachable!()
+            }
+        } else {
+            self.err_next("A {block} was expected")
+        }
+    }
 
+    // Assumes the first token is Token::OpenDelim(_)
+    fn parse_splice(&mut self) -> Result<Spanned<Tree>, ()> {
+        let tt = self.p.parse_token_tree().unwrap();
+        if let TokenTree::Delimited(span, delimited) = tt {
+
+            // {} is treated as "{}"
+            if delimited.tts.is_empty() {
+                if delimited.delim == DelimToken::Brace && span.lo.0 + 2 == span.hi.0 {
+                    return Ok(respan(span, Tree::Word("{}".into())))
+                } else {
+                    self.cx.span_err(span, "Rust expression expected inside this block");
+                    return Err(())
+                }
+            }
+
+            let mut p = self.cx.new_parser_from_tts(&delimited.tts);
+            let expr = p.parse_expr().map_err(|mut e| e.emit())?;
+
+            p.expect(&Token::Eof).map_err(|e| {e}.emit())?;
+            Ok(respan(
+                span,
+                match delimited.delim {
+                    DelimToken::Paren => Tree::Arg(expr),
+                    DelimToken::Bracket => Tree::Args(expr),
+                    DelimToken::Brace => Tree::Cmd(expr),
+                }
+            ))
+        } else {
+            unreachable!()
+        }
+    }
+
+    // Assumes the fist token is match keyword
+    fn parse_match(&mut self) -> Result<Spanned<Tree>, ()> {
+        self.cx.span_unimpl(self.p.span, "match is unimplemented");
+    }
+
+    fn err_next<T>(&mut self, msg: &str) -> Result<T, ()> {
+        self.cx.span_err(self.p.span, msg);
+        Err(())
+    }
+}
