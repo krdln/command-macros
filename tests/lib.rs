@@ -44,8 +44,34 @@ mod plugin {
     }
 
     #[test]
+    fn strings() {
+        quicktest(command!("echo" r"a~\b"), "a~\\b");
+    }
+
+    #[test]
     fn ugly() {
         quicktest(command!(echo if {{}; false}{a}else{b}), "b");
         quicktest(command!(echo if-a=5 {} else {}), "if-a=5 {} else {}");
+    }
+
+    #[test]
+    fn match_test() {
+        for &(x, target) in &[
+            (Ok(1), ". 0101 ."),
+            (Ok(5), ". small 5 ."),
+            (Ok(10), ". 10 ."),
+            (Err("bu"), ". err bu ."),
+        ] {
+            quicktest(command!(
+                    echo . match x {
+                        Ok(0) | Ok(1) => { 0101 },
+                        Ok(x) if x < 7 => { small (x.to_string()) },
+                        Ok(x) => { (x.to_string()) }
+                        Err(x) => { err (x) }
+                    } .
+                ),
+                target
+            );
+        }
     }
 }

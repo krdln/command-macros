@@ -50,10 +50,16 @@ macro_rules! cmd {
     };
 
     // match
-    ({$e:expr} match ($m:expr) { $($p:pat => {$($rr:tt)*} )* } $($tail:tt)*) => {
+    ({$e:expr} match ($m:expr) { $($($p:pat)|+ $(if $g:expr)* => {$($rr:tt)*} ),* } $($tail:tt)*) => {
+        cmd!({$e} match ($m) { $($($p)|+ $(if $g)* => {$($rr)*})* } $($tail)*)
+    };
+    ({$e:expr} match ($m:expr) { $($($p:pat)|+ $(if $g:expr)* => {$($rr:tt)*},)* } $($tail:tt)*) => {
+        cmd!({$e} match ($m) { $($($p)|+ $(if $g)* => {$($rr)*})* } $($tail)*)
+    };
+    ({$e:expr} match ($m:expr) { $($($p:pat)|+ $(if $g:expr)* => {$($rr:tt)*} )* } $($tail:tt)*) => {
         {
             let cmd = $e;
-            cmd!( {match $m { $($p => cmd!({cmd} $($rr)*)),* }} $($tail)* )
+            cmd!( {match $m { $($($p)|+ $(if $g)* => cmd!({cmd} $($rr)*)),* }} $($tail)* )
         }
     };
 
@@ -151,6 +157,24 @@ fn match_test() {
             tail),
         "--number 5 tail"
     );
+
+    for &(x, target) in &[
+        (Ok(1), ". 0101 ."),
+        (Ok(5), ". small 5 ."),
+        (Ok(10), ". 10 ."),
+        (Err("bu"), ". err bu ."),
+    ] {
+        quicktest(cmd!(
+                echo (".") match (x) {
+                    Ok(0) | Ok(1) => { ("0101") },
+                    Ok(x) if x < 7 => { small (x.to_string()) },
+                    Ok(x) => { (x.to_string()) },
+                    Err(x) => { err (x) }
+                } (".")
+            ),
+            target
+        );
+    }
 }
 
 #[test]

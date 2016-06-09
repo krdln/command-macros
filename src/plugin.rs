@@ -1,6 +1,6 @@
 use syntax::ptr::P;
 use syntax::codemap::{Span, Spanned, respan, DUMMY_SP};
-use syntax::parse::token::{Lit, Token, DelimToken};
+use syntax::parse::token::{self, Lit, Token, DelimToken};
 use syntax::parse::token::keywords;
 use syntax::parse::token::{intern, intern_and_get_ident};
 use syntax::parse::parser::{self, Restrictions};
@@ -37,7 +37,7 @@ enum Tree {
     Args(P<Expr>),
     Cmd(P<Expr>),
     If(Condition, Vec<Spanned<Tree>>, Vec<Spanned<Tree>>),
-    Match(Vec<(P<Pat>, Option<P<Expr>>, Vec<Spanned<Tree>>)>),
+    Match(P<Expr>, Vec<Spanned<(Vec<P<Pat>>, Option<P<Expr>>, Vec<Spanned<Tree>>)>>),
 }
 
 fn get_trees_span(trees: &[Spanned<Tree>]) -> Span {
@@ -105,14 +105,21 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
                 cx.span_err(span, "The {} mode doesn't make sense for arguments. Use () instead");
                 return Err(());
             }
-            Tree::Match(..) => unimplemented!(),
+            Tree::Match(expr, arms) => {
+                let arms = arms.into_iter().map(
+                    |Spanned{span, node: (pats, guard, trees)}| {
+                        let block = generate_block(cx, trees)?;
+                        let block = cx.expr_block(block);
+                        let mut arm = cx.arm(span, pats, block);
+                        arm.guard = guard;
+                        Ok(arm)
+                    }
+                ).collect()?;
+                cx.expr_match(span, expr, arms)
+            }
             Tree::If(cond, then, els) => {
-                let span = get_trees_span(&then);
-                let stmts = generate_inner(cx, then)?;
-                let then = cx.block(span, stmts, None);
-                let span = get_trees_span(&els);
-                let stmts = generate_inner(cx, els)?;
-                let els = cx.block(span, stmts, None);
+                let then = generate_block(cx, then)?;
+                let els = generate_block(cx, els)?;
                 match cond {
                     Condition::Bool(e) => quote_expr!(cx, if $e $then else $els),
                     Condition::IfLet(p, e) => quote_expr!(cx, if let $p = $e $then else $els)
@@ -121,6 +128,12 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
         };
         Ok(cx.stmt_expr(x))
     }).collect()
+}
+
+fn generate_block(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<P<Block>, ()> {
+    let span = get_trees_span(&trees);
+    let stmts = generate_inner(cx, trees)?;
+    Ok(cx.block(span, stmts, None))
 }
 
 struct Parser<'a, 'b: 'a> {
@@ -287,6 +300,57 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
         ))
     }
 
+    // Assumes the fist token is match keyword
+    fn parse_match(&mut self) -> Result<Spanned<Tree>, ()> {
+        let match_kw_span = self.p.span;
+        if !self.parse_naked_keyword()? {
+            return self.parse_word("match".into());
+        }
+        let expr = self.p.parse_expr_res(Restrictions::RESTRICTION_NO_STRUCT_LITERAL, None)
+            .map_err(|mut e| e.emit())?;
+
+        if !self.p.check(&Token::OpenDelim(DelimToken::Brace)) {
+            return self.err_next("A {block} was expected after a match expression")
+        }
+
+        let tt = self.p.parse_token_tree().map_err(|e| {e}.emit())?;
+        let delimited = if let TokenTree::Delimited(_, d) = tt { d } else { unreachable!() };
+
+        let mut p = Parser::new(self.cx, &delimited.tts);
+
+        let mut arms = vec![];
+        loop {
+            let mut pats = vec![];
+            loop {
+                pats.push(p.p.parse_pat().map_err(|e| {e}.emit())?);
+                if p.p.check(&Token::BinOp(token::Or)) {
+                    p.p.bump();
+                } else {
+                    break;
+                }
+            }
+
+            let guard = if p.p.eat_keyword(keywords::If) {
+                Some(p.p.parse_expr().map_err(|e| {e}.emit())?)
+            } else { None };
+
+            p.p.expect(&Token::FatArrow).map_err(|e|{e}.emit())?;
+
+            let block = p.parse_block()?;
+            if p.p.check(&Token::Comma) { p.p.bump(); }
+
+            arms.push(respan(
+                span_from_to(pats[0].span, p.p.last_span),
+                (pats, guard, block),
+            ));
+
+            if p.p.check(&Token::Eof) {
+                break;
+            }
+        }
+        Ok(respan(span_from_to(match_kw_span, delimited.close_span), Tree::Match(expr, arms)))
+    }
+
     fn parse_block(&mut self) -> Result<Vec<Spanned<Tree>>, ()> {
         if self.p.check(&Token::OpenDelim(DelimToken::Brace)) {
             let tt = self.p.parse_token_tree().unwrap();
@@ -330,11 +394,6 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
         } else {
             unreachable!()
         }
-    }
-
-    // Assumes the fist token is match keyword
-    fn parse_match(&mut self) -> Result<Spanned<Tree>, ()> {
-        self.cx.span_unimpl(self.p.span, "match is unimplemented");
     }
 
     fn err_next<T>(&mut self, msg: &str) -> Result<T, ()> {
