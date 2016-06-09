@@ -205,6 +205,17 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             self.parse_match()
         } else if self.p.check_keyword(keywords::For) {
             self.parse_for()
+        } else if self.p.check_keyword(keywords::Let) {
+            self.p.bump();
+            if !self.touches_next() {
+                self.cx.span_err(
+                    self.p.last_span,
+                    "Let is not supported, you can emulate it by `match` if you really want"
+                );
+                Err(())
+            } else {
+                self.parse_word("let".into())
+            }
         } else if self.check_opening() {
             self.parse_splice()
         } else {
@@ -225,45 +236,46 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
     fn parse_word(&mut self, already: String) -> Result<Spanned<Tree>, ()> {
         let start_span = self.p.span;
         let mut word = already;
+        let mut has_string_literal = false;
+        let mut n_tokens = 0;
         loop {
             if self.check_opening() {
                 break;
             }
             
-            word.push_str(&self.parse_token_as_string()?);
+            if self.p.token == Token::Dollar {
+                return self.err_next("Dollar-style splicing is not supported, use (expr) or ((expr)) instead.")
+            }
+
+            let (string, was_string_literal) = self.parse_token_as_string()?;
+            has_string_literal |= was_string_literal;
+            n_tokens += 1;
+            word.push_str(&string);
 
             if !self.touches_next() {
                 break;
             }
         }
-        Ok(respan(
-            span_from_to(start_span, self.p.last_span),
-            Tree::Word(word),
-        ))
+
+        let span = span_from_to(start_span, self.p.last_span);
+
+        if has_string_literal && n_tokens != 1 {
+            self.cx.span_warn(span, "String literal should cover this whole word");
+        }
+
+        Ok(respan(span, Tree::Word(word)))
     }
 
-    fn parse_token_as_string(&mut self) -> Result<String, ()> {
+    fn parse_token_as_string(&mut self) -> Result<(String, bool), ()> {
         if let Token::Literal(lit, _) = self.p.token {
             match lit {
                 Lit::Char(..) | Lit::Str_(..) | Lit::StrRaw(..) => {
-                    let span = self.p.span;
-                    let warn = |s: &mut Parser| {
-                        if s.touches_next() {
-                            s.cx.span_warn(
-                                span,
-                                "String literals should cover the whole word to avoid confusion"
-                            );
-                        }
-                    };
-                    warn(self);
                     match self.p.parse_lit_token() {
                         Ok(LitKind::Char(c)) => {
-                            warn(self);
-                            return Ok(c.to_string())
+                            return Ok((c.to_string(), false))
                         }
                         Ok(LitKind::Str(s, _)) => {
-                            warn(self);
-                            return Ok(s.to_string())
+                            return Ok((s.to_string(), true))
                         }
                         _ => unreachable!()
                     }
@@ -279,7 +291,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
         }
         let stringified = self.cx.parse_sess.codemap().span_to_snippet(self.p.span).unwrap();
         self.p.bump();
-        Ok(stringified)
+        Ok((stringified, false))
     }
     
     fn parse_naked_keyword(&mut self) -> Result<bool, ()> {

@@ -52,6 +52,7 @@ mod plugin {
     fn ugly() {
         quicktest(command!(echo if {{}; false}{a}else{b}), "b");
         quicktest(command!(echo if-a=5 {} else {}), "if-a=5 {} else {}");
+        quicktest(command!(echo else-a {} let-a {}), "else-a {} let-a {}");
     }
 
     #[test]
@@ -83,7 +84,7 @@ mod plugin {
     #[test]
     fn touching() {
         quicktest(command![echo number((2+2))], "number4");
-        quicktest(command![e("ch")(('o')) number((2+2))], "number4");
+        quicktest(command![("e")"ch"(('o')) number((2+2))], "number4");
         quicktest(command![echo ("abc")-((5))-def.txt hij], "abc-5-def.txt hij");
     }
 
