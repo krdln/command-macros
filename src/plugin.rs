@@ -33,9 +33,10 @@ fn span_from_to(from: Span, to: Span) -> Span {
 
 enum Tree {
     Word(String),
-    Arg(P<Expr>),
-    Args(P<Expr>),
-    Cmd(P<Expr>),
+    ToStr(P<Expr>), // (x)
+    AsOsStr(P<Expr>), // ((x))
+    Args(P<Expr>), // [x]
+    Cmd(P<Expr>), // {x}
     If(Condition, Vec<Spanned<Tree>>, Vec<Spanned<Tree>>),
     Match(P<Expr>, Vec<Spanned<(Vec<P<Pat>>, Option<P<Expr>>, Vec<Spanned<Tree>>)>>),
 }
@@ -66,7 +67,7 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
             let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
             cx.expr_call(span, new_expr, vec![str_lit])
         }
-        Tree::Arg(e) => cx.expr_call(span, new_expr, vec![e]),
+        Tree::AsOsStr(e) => cx.expr_call(span, new_expr, vec![e]),
         Tree::Cmd(e) => e,
         _ => {
             cx.span_err(span, "Command name should be `cmd` `(cmd_name_expr)` or `{Command_expr}`");
@@ -86,14 +87,19 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
     let cmd_expr = quote_expr!(cx, cmd);
     let arg_ident = Ident::with_empty_ctxt(intern("arg"));
     let args_ident = Ident::with_empty_ctxt(intern("args"));
+    let to_string_ident = Ident::with_empty_ctxt(intern("to_string"));
 
     trees.into_iter().map(|Spanned{span, node: tree}| {
         let x = match tree {
             Tree::Word(string) => {
                 let str_lit = cx.expr_str(span, intern_and_get_ident(&string));
-                quote_expr!(cx, cmd.arg($str_lit))
+                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![str_lit])
             }
-            Tree::Arg(e) => {
+            Tree::ToStr(e) => {
+                let to_string = cx.expr_method_call(span, e, to_string_ident, vec![]);
+                cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![to_string])
+            }
+            Tree::AsOsStr(e) => {
                 let reffed = cx.expr_addr_of(span, e);
                 cx.expr_method_call(span, cmd_expr.clone(), arg_ident, vec![reffed])
             }
@@ -367,16 +373,27 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
     // Assumes the first token is Token::OpenDelim(_)
     fn parse_splice(&mut self) -> Result<Spanned<Tree>, ()> {
         let tt = self.p.parse_token_tree().unwrap();
-        if let TokenTree::Delimited(span, delimited) = tt {
+        if let TokenTree::Delimited(span, ref delimited) = tt {
+            let mut delimited = delimited;
 
             // {} is treated as "{}"
-            if delimited.tts.is_empty() {
-                if delimited.delim == DelimToken::Brace && span.lo.0 + 2 == span.hi.0 {
-                    return Ok(respan(span, Tree::Word("{}".into())))
-                } else {
-                    self.cx.span_err(span, "Rust expression expected inside this block");
-                    return Err(())
+            if delimited.tts.is_empty() &&
+                delimited.delim == DelimToken::Brace && span.lo.0 + 2 == span.hi.0
+            {
+                return Ok(respan(span, Tree::Word("{}".into())))
+            }
+
+            let mut is_parenparen = false;
+            if let [TokenTree::Delimited(_, ref d)] = &delimited.tts[..] {
+                if delimited.delim == DelimToken::Paren && d.delim == DelimToken::Paren {
+                    delimited = d;
+                    is_parenparen = true;
                 }
+            }
+
+            if delimited.tts.is_empty() {
+                self.cx.span_err(span, "Rust expression expected inside this block");
+                return Err(())
             }
 
             let mut p = self.cx.new_parser_from_tts(&delimited.tts);
@@ -386,7 +403,8 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             Ok(respan(
                 span,
                 match delimited.delim {
-                    DelimToken::Paren => Tree::Arg(expr),
+                    _ if is_parenparen => Tree::ToStr(expr),
+                    DelimToken::Paren => Tree::AsOsStr(expr),
                     DelimToken::Bracket => Tree::Args(expr),
                     DelimToken::Brace => Tree::Cmd(expr),
                 }

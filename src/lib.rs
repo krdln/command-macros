@@ -30,6 +30,16 @@ pub fn plugin_registrar(reg: &mut Registry) {
 macro_rules! cmd {
     ({$e:expr}) => ($e);
 
+    // arg ToString splice
+    ({$e:expr} (($a:expr)) $($tail:tt)*) =>
+    {
+        {
+            let mut cmd = $e;
+            cmd.arg($a.to_string());
+            cmd!( {cmd} $($tail)* )
+        }
+    };
+
     // arg splice
     ({$e:expr} ($a:expr) $($tail:tt)*) => 
     {
@@ -178,7 +188,7 @@ fn iflet() {
     let option = Some(5);
     quicktest(
         cmd!(echo
-            if let Some(x) = (option) {("--number") (x.to_string())}
+            if let Some(x) = (option) { ("--number") ((x)) }
             tail),
         "--number 5 tail"
     );
@@ -219,6 +229,13 @@ fn test_mutref() {
     let cmd = &mut Command::new("echo");
     let cmd: &mut Command = cmd!({cmd} foo);
     assert_eq!(cmd.output().unwrap().stdout, &b"foo\n"[..]);
+}
+
+#[test]
+fn test_parenparen() {
+    quicktest(cmd!( echo ((2+2)) ), "4");
+    let foo = || "a";
+    quicktest(cmd!( echo ((foo)()) ), "a");
 }
 
 

@@ -74,4 +74,9 @@ mod plugin {
             );
         }
     }
+
+    #[test]
+    fn parenparen() {
+        quicktest(command!(echo ((2+2))), "4");
+    }
 }
