@@ -469,7 +469,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             }
 
             let mut is_parenparen = false;
-            if let [TokenTree::Delimited(_, ref d)] = &delimited.tts[..] {
+            if let [TokenTree::Delimited(_, ref d)] = delimited.tts[..] {
                 if delimited.delim == DelimToken::Paren && d.delim == DelimToken::Paren {
                     delimited = d;
                     is_parenparen = true;
