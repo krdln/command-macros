@@ -83,7 +83,7 @@ you can also pass it to this macro:
 
 ```rust
 let base: Command = prepare();
-let cmd = command!({cmd} install (package));
+let cmd = command!({base} install (package));
 ```
 
 ## `cmd!`
