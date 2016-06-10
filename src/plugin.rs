@@ -8,6 +8,25 @@ use syntax::ast::{TokenTree, LitKind, Expr, Stmt, Block, Pat, Ident};
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder;  // trait for expr_usize
 
+// Stub to show up in documentation.
+#[cfg(dox)]
+/// Full-featured macro for creating `Command`
+///
+/// Please read the syntax description in the crate's [documentation](index.html).
+///
+/// # Examples
+///
+/// ```
+/// #![feature(plugin)]
+/// #![plugin(command_macros)]
+///
+/// fn main() {
+///     command!(echo ((2+2))=4).status().unwrap();
+/// }
+/// ```
+#[macro_export]
+macro_rules! command{ ($($tt:tt)*) => {} }
+
 pub fn expand_command(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
     -> Box<MacResult + 'static>
 {
@@ -76,16 +95,16 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
         }
     };
 
-    let mut stmts: Vec<Stmt> = vec![quote_stmt!(cx, let mut cmd = $cmd_expr).unwrap()];
+    let mut stmts: Vec<Stmt> = vec![quote_stmt!(cx, let mut _cmd = $cmd_expr).unwrap()];
     stmts.extend(generate_inner(cx, trees)?);
 
-    Ok(cx.block(span, stmts, Some(quote_expr!(cx, cmd))))
+    Ok(cx.block(span, stmts, Some(quote_expr!(cx, _cmd))))
 }
 
 fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stmt>, ()> {
 
     // Not using quote for cmd.arg(&$e), because I want to put proper spans in expressions.
-    let cmd_expr = quote_expr!(cx, cmd);
+    let cmd_expr = quote_expr!(cx, _cmd);
     let arg_ident = Ident::with_empty_ctxt(intern("arg"));
     let args_ident = Ident::with_empty_ctxt(intern("args"));
 
@@ -138,7 +157,10 @@ fn generate_os_str(cx: &mut ExtCtxt, Spanned{span, node: tree}: Spanned<Tree>) -
     let push_ident = Ident::with_empty_ctxt(intern("push"));
     match tree {
         Tree::Word(string) => Ok(cx.expr_str(span, intern_and_get_ident(&string))),
-        Tree::ToStr(e) => Ok(cx.expr_method_call(span, e, to_string_ident, vec![])),
+        Tree::ToStr(e) => {
+            let reffed = cx.expr_addr_of(span, e);
+            Ok(cx.expr_method_call(span, reffed, to_string_ident, vec![]))
+        }
         Tree::AsOsStr(e) => Ok(cx.expr_addr_of(span, e)),
         Tree::Touching(trees) => {
             let mut stmts = vec![quote_stmt!(cx, let mut s = ::std::ffi::OsString::new()).unwrap()];

@@ -1,6 +1,6 @@
-#![feature(plugin)]
+#![cfg_attr(feature = "nightly", feature(plugin))]
 
-#![plugin(command_macros)]
+#![cfg_attr(feature = "nightly", plugin(command_macros))]
 
 #[cfg(feature = "nightly")]
 mod plugin {
@@ -37,9 +37,9 @@ mod plugin {
                 echo -i (file)
                 -c:v libx264 -preset (preset) [moreargs]
                 -c:a copy
-                (tmpname)
+                file:(tmpname)
             ),
-            "-i file.mp4 -c:v libx264 -preset slow -pix_fmt yuv420p -c:a copy tmp.mkv"
+            "-i file.mp4 -c:v libx264 -preset slow -pix_fmt yuv420p -c:a copy file:tmp.mkv"
         );
     }
 
@@ -100,5 +100,19 @@ mod plugin {
             "--add 1.a.txt --add 2.b.txt end"
         );
         quicktest(command!(echo for-me), "for-me");
+    }
+
+    #[test]
+    fn not_moving() {
+        let s = String::new();
+        command!((s));
+        command!(((s)));
+        command!((s));
+    }
+
+    #[test]
+    fn hygiene() {
+        let _cmd = 42;
+        quicktest(command![echo ((_cmd))], "42");
     }
 }

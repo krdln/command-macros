@@ -1,3 +1,221 @@
+//! Macros for creating
+//! [`std::process::Command`](https://static.rust-lang.org/doc/master/std/process/struct.Command.html)
+//! with shell-like syntax.
+//!
+//! The `command!` macro is a syntax extension and requires nightly,
+//! the `cmd!` is simpler version built using `macro_rules!`.
+//!
+//! This page describes syntax used by both `command!` and `cmd!` macros.
+//! See the [github page](https://github.com/krdln/command-macros) for more general introduction.
+//!
+//! Features marked with \* are unavailable for `cmd!`.
+//!
+//! ## Naked idents
+//!
+//! First ident is treated as command name,
+//! the rest are parsed as arugments. This invocation:
+//!
+//! ```
+//! # #[macro_use] extern crate command_macros;
+//! # fn main() {
+//! cmd!(echo foo bar).status().unwrap();
+//! # }
+//! ```
+//!
+//! expands to
+//!
+//! ```ignore
+//! {
+//!     let cmd = ::std::process::Command::new("echo");
+//!     cmd.arg("foo");
+//!     cmd.arg("bar");
+//!     cmd
+//! }.status().unwrap()
+//! ```
+//!
+//! ## `(expression)` (OsStr expression)
+//!
+//! Interior of `( )` is parsed as Rust expression
+//! which should evaluate to `T: AsRef<OsStr>`.
+//! This will be put in `cmd.arg(& $expr)`.
+//! The `&` is added automatically, like in `println!`,
+//! to prevent accidentally moving arguments.
+//!
+//! ```no_run
+//! # #[macro_use] extern crate command_macros;
+//! # fn main() {
+//! let filename = String::new("foo bar");
+//! let get_command = || "touch";
+//! cmd!( (get_command()) (filename) ).status().unwrap();
+//! # }
+//! ```
+//!
+//! ## `((expression))` (ToString expression)
+//!
+//! Interior of `(( ))` is parsed as Rust expression
+//! which should evaluate to `T: ToString`.
+//! Similar rules as with `( )` apply.
+//!
+//! The following should echo `4`
+//!
+//! ```
+//! # #[macro_use] extern crate command_macros;
+//! # fn main() {
+//! cmd!( echo ((2+2)) ).status().unwrap();
+//! # }
+//! ```
+//!
+//! ## `[expression]` (args expression)
+//!
+//! Interior of `[ ]` is parsed as Rust expression
+//! which should evaluate to `[T: AsRef<OsStr>]`
+//! (modulo `Deref`).
+//! This expression will be put in `cmd.args(& $expr)`
+//!
+//! ```no_run
+//! # #[macro_use] extern crate command_macros;
+//! # fn main() {
+//! let args: Vec<_> = std::env::args_os().collect();
+//! cmd!( (args[1]) [args[2..]] ).status().unwrap();
+//! # }
+//! ```
+//!
+//! ## `{expression}` (Command expression)
+//!
+//! Interior of `{ }` is parsed as Rust expression
+//! which should evaluate to `Command` or `&mut Command`
+//! (or anything that has `arg` and `args` methods).
+//! It is allowed only at the beginning of macro.
+//! It is helpful when you want to append arguments to
+//! existing command:
+//!
+//! ```no_run
+//! # #[macro_use] extern crate command_macros;
+//! # fn main() {
+//! let cmd = ::std::process::Command::new("echo");
+//! cmd!( {&mut cmd} bar baz )
+//! # }
+//! ```
+//!
+//! ## Strings\*
+//!
+//! String literals work like in shell – they expand to single argument or part of it.
+//! Character literals and raw string literals are also supported.
+//! Note that shell-style `"$variables"` won't work here.
+//!
+//! ```ignore
+//! command!("echo" "single argument" "***")
+//! ```
+//!
+//! `cmd!` workaroud:
+//!
+//! ```ignore
+//! cmd!(echo ("single argument") ("***"))
+//! ```
+//!
+//! ## Arbitrary tokens\*
+//!
+//! Everything that is not [block], {block}, (block) or string literal,
+//! will be stringified. This is mostly helpful for unix-like flags.
+//! Everything within a single whitespace-separated chunk will be treated
+//! as a single argument. In the following example we are passing
+//! three arguments to a `foo.2.5` command.
+//!
+//! ```ignore
+//! command!(foo.2.5 --flag   -v:c -=|.|=-).status().unwrap();
+//! ```
+//!
+//! `cmd!` workaround: `("--flag")`.
+//!
+//! ## Multi-part arguments\*
+//!
+//! You can mix `((e))`, `(e)`, tokens and strings within a single
+//! arguments as long as they are not separated by whitespace.
+//! The following will touch the `foo.v5.special edition` file.
+//!
+//! ```ignore
+//! let p = Path::new("foo");
+//! let version = 5;
+//! command!(touch (p).v((version))".special edition")
+//! ```
+//!
+//! This is roughly equivalent to `(format!(...))`, but the macro version
+//! can handle `OsStr`s (such as `Path`).
+//!
+//! Please note that this is **not** supported by `cmd!`, which would evaluate
+//! every part as *separate* argument.
+//!
+//! ## `{}`\*
+//!
+//! Empty `{}` is treated as `"{}"`. This is handy when using commands like `find`.
+//! There has to be no space between braces.
+//!
+//!
+//! ## If
+//!
+//! The `if` token should be surrounded by whitespace.
+//! The expression (and pattern in if-let) is parsed as Rust,
+//! the inside of {block} is parsed using regular `commmand!` syntax
+//! and can evaluate to multiple arguments (or 0).
+//! The following should pass `--number` `5` to command `foo`.
+//!
+//! ```ignore
+//! let bar = 5;
+//! let option = Some(5);
+//! command!(foo
+//!     if bar > 10 { zzz }
+//!     else if let Some(a) = option { --number ((a)) }
+//! ).status().unwrap();
+//! ```
+//!
+//! `cmd!` limitations: `else if` is not supported, expression has to be in parens.
+//!
+//! ```ignore
+//! cmd!(foo
+//!     if (bar > 10) { zzz }
+//!     else { if let Some(a) = (option) { ("--number") ((a)) } }
+//! ).status().unwrap();
+//! ```
+//!
+//! ## Match
+//!
+//! The `match` token should be surrounded by whitespace.
+//! The expression and patterns are parsed as Rust.
+//! On the right side of `=>` there should be a {block},
+//! which will be parsed (similarly to if blocks)
+//! using regular `command!` syntax.
+//!
+//! This example will pass a single argument `yes` to `foo` command.
+//!
+//! ```ignore
+//! let option = Some(5);
+//! command!(foo
+//!     match option {
+//!         Some(x) if x > 10 => {}
+//!         _ => { yes }
+//!     }
+//! ).status().unwrap()
+//! ```
+//!
+//! `cmd!` limitation: expression after `match` has to be in parens.
+//!
+//! ## For
+//!
+//! The `for` token should be surrounded by whitespace.
+//! The expression and patterns are parsed as Rust.
+//! The interior of block is parsed using `command!` syntax,
+//! and will be evaluated in every iteration.
+//!
+//! This example will pass three arguments `1` `2` `3`.
+//!
+//! ```ignore
+//! command!(echo
+//!     for x in 1..4 {
+//!         ((x))
+//!     }
+//! ).status().unwrap()
+//! ```
+
 #![cfg_attr(
     feature = "nightly",
     feature(
@@ -10,22 +228,38 @@
 )]
 #![cfg_attr(feature = "nightly", crate_type = "dylib")]
 
-#[cfg(feature = "nightly")]
-mod plugin;
+#[cfg(feature = "nightly")] mod plugin;
 
 #[cfg(feature = "nightly")] extern crate syntax;
 #[cfg(feature = "nightly")] extern crate rustc;
 #[cfg(feature = "nightly")] extern crate rustc_plugin;
 
 #[cfg(feature = "nightly")]
-use rustc_plugin::Registry;
-
-#[cfg(feature = "nightly")]
 #[plugin_registrar]
-pub fn plugin_registrar(reg: &mut Registry) {
+pub fn plugin_registrar(reg: &mut rustc_plugin::Registry) {
     reg.register_macro("command", plugin::expand_command);
 }
 
+/// Simple macro for creating `Command`.
+///
+/// Please read the syntax description in the crate's [documentation](index.html).
+///
+/// Please note that this macro is **not** whitespace-sensitive and the following
+/// will evaluate to four separate arguments (as opposed to one in `command!`):
+///
+/// ```ignore
+/// cmd!(echo (foo)(bar)baz(qux)) // don't do it!
+/// ```
+///
+/// # Examples
+///
+/// ```
+/// #[macro_use] extern crate command_macros;
+///
+/// fn main() {
+///     cmd!( echo ((2+2)) ).status.unwrap();
+/// }
+/// ```
 #[macro_export]
 macro_rules! cmd {
     ({$e:expr}) => ($e);
@@ -35,7 +269,7 @@ macro_rules! cmd {
     {
         {
             let mut cmd = $e;
-            cmd.arg($a.to_string());
+            cmd.arg((&$a).to_string());
             cmd!( {cmd} $($tail)* )
         }
     };
@@ -260,4 +494,11 @@ fn for_loop() {
     );
 }
 
+#[test]
+fn not_moving() {
+    let s = String::new();
+    cmd!((s));
+    cmd!(((s)));
+    cmd!((s));
+}
 
