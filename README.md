@@ -24,7 +24,7 @@ version = "0.1.1"
 features = ["nightly"]
 ```
 
-When using nightly from before 2016-06-10 use `version = 0.1.0`.
+When using nightly from before 2016-06-10 use `version = "0.1.0"`.
 
 And then add on top of your root module:
 ```rust
