@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `command_macros` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, command_macros">
+
+    <title>command_macros - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'command_macros', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>command_macros</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-0' class='srclink' href='../src/command_macros/src/lib.rs.html#1-503' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Macros for creating
+<a href="https://static.rust-lang.org/doc/master/std/process/struct.Command.html"><code>std::process::Command</code></a>
+with shell-like syntax.</p>
+
+<p>The <code>command!</code> macro is a syntax extension and requires nightly,
+the <code>cmd!</code> is simpler version built using <code>macro_rules!</code>.</p>
+
+<p>This page describes syntax used by both <code>command!</code> and <code>cmd!</code> macros.
+See the <a href="https://github.com/krdln/command-macros">github page</a> for more general introduction.</p>
+
+<p>Features marked with * are unavailable for <code>cmd!</code>.</p>
+
+<h2 id='naked-idents' class='section-header'><a href='#naked-idents'>Naked idents</a></h2>
+<p>First ident is treated as command name,
+the rest are parsed as arugments. This invocation:</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span> <span class='ident'>foo</span> <span class='ident'>bar</span>).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<p>expands to</p>
+
+<pre class='rust rust-example-rendered'>
+{
+    <span class='kw'>let</span> <span class='ident'>cmd</span> <span class='op'>=</span> ::<span class='ident'>std</span>::<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;echo&quot;</span>);
+    <span class='ident'>cmd</span>.<span class='ident'>arg</span>(<span class='string'>&quot;foo&quot;</span>);
+    <span class='ident'>cmd</span>.<span class='ident'>arg</span>(<span class='string'>&quot;bar&quot;</span>);
+    <span class='ident'>cmd</span>
+}.<span class='ident'>status</span>().<span class='ident'>unwrap</span>()</pre>
+
+<h2 id='expression-osstr-expression' class='section-header'><a href='#expression-osstr-expression'><code>(expression)</code> (OsStr expression)</a></h2>
+<p>Interior of <code>( )</code> is parsed as Rust expression
+which should evaluate to <code>T: AsRef&lt;OsStr&gt;</code>.
+This will be put in <code>cmd.arg(&amp; $expr)</code>.
+The <code>&amp;</code> is added automatically, like in <code>println!</code>,
+to prevent accidentally moving arguments.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>filename</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>new</span>(<span class='string'>&quot;foo bar&quot;</span>);
+<span class='kw'>let</span> <span class='ident'>get_command</span> <span class='op'>=</span> <span class='op'>||</span> <span class='string'>&quot;touch&quot;</span>;
+<span class='macro'>cmd</span><span class='macro'>!</span>( (<span class='ident'>get_command</span>()) (<span class='ident'>filename</span>) ).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<h2 id='expression-tostring-expression' class='section-header'><a href='#expression-tostring-expression'><code>((expression))</code> (ToString expression)</a></h2>
+<p>Interior of <code>(( ))</code> is parsed as Rust expression
+which should evaluate to <code>T: ToString</code>.
+Similar rules as with <code>( )</code> apply.</p>
+
+<p>The following should echo <code>4</code></p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>( <span class='ident'>echo</span> ((<span class='number'>2</span><span class='op'>+</span><span class='number'>2</span>)) ).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<h2 id='expression-args-expression' class='section-header'><a href='#expression-args-expression'><code>[expression]</code> (args expression)</a></h2>
+<p>Interior of <code>[ ]</code> is parsed as Rust expression
+which should evaluate to <code>[T: AsRef&lt;OsStr&gt;]</code>
+(modulo <code>Deref</code>).
+This expression will be put in <code>cmd.args(&amp; $expr)</code></p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>args</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span>_<span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>std</span>::<span class='ident'>env</span>::<span class='ident'>args_os</span>().<span class='ident'>collect</span>();
+<span class='macro'>cmd</span><span class='macro'>!</span>( (<span class='ident'>args</span>[<span class='number'>1</span>]) [<span class='ident'>args</span>[<span class='number'>2</span>..]] ).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<h2 id='expression-command-expression' class='section-header'><a href='#expression-command-expression'><code>{expression}</code> (Command expression)</a></h2>
+<p>Interior of <code>{ }</code> is parsed as Rust expression
+which should evaluate to <code>Command</code> or <code>&amp;mut Command</code>
+(or anything that has <code>arg</code> and <code>args</code> methods).
+It is allowed only at the beginning of macro.
+It is helpful when you want to append arguments to
+existing command:</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>cmd</span> <span class='op'>=</span> ::<span class='ident'>std</span>::<span class='ident'>process</span>::<span class='ident'>Command</span>::<span class='ident'>new</span>(<span class='string'>&quot;echo&quot;</span>);
+<span class='macro'>cmd</span><span class='macro'>!</span>( {<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>cmd</span>} <span class='ident'>bar</span> <span class='ident'>baz</span> )</pre>
+
+<h2 id='strings' class='section-header'><a href='#strings'>Strings*</a></h2>
+<p>String literals work like in shell – they expand to single argument or part of it.
+Character literals and raw string literals are also supported.
+Note that shell-style <code>&quot;$variables&quot;</code> won&#39;t work here.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='string'>&quot;echo&quot;</span> <span class='string'>&quot;single argument&quot;</span> <span class='string'>&quot;***&quot;</span>)</pre>
+
+<p><code>cmd!</code> workaroud:</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span> (<span class='string'>&quot;single argument&quot;</span>) (<span class='string'>&quot;***&quot;</span>))</pre>
+
+<h2 id='arbitrary-tokens' class='section-header'><a href='#arbitrary-tokens'>Arbitrary tokens*</a></h2>
+<p>Everything that is not [block], {block}, (block) or string literal,
+will be stringified. This is mostly helpful for unix-like flags.
+Everything within a single whitespace-separated chunk will be treated
+as a single argument. In the following example we are passing
+three arguments to a <code>foo.2.5</code> command.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>foo</span>.<span class='number'>2.5</span> <span class='op'>-</span><span class='op'>-</span><span class='ident'>flag</span>   <span class='op'>-</span><span class='ident'>v</span>:<span class='ident'>c</span> <span class='op'>-=</span><span class='op'>|</span>.<span class='op'>|=</span><span class='op'>-</span>).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<p><code>cmd!</code> workaround: <code>(&quot;--flag&quot;)</code>.</p>
+
+<h2 id='multi-part-arguments' class='section-header'><a href='#multi-part-arguments'>Multi-part arguments*</a></h2>
+<p>You can mix <code>((e))</code>, <code>(e)</code>, tokens and strings within a single
+arguments as long as they are not separated by whitespace.
+The following will touch the <code>foo.v5.special edition</code> file.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>p</span> <span class='op'>=</span> <span class='ident'>Path</span>::<span class='ident'>new</span>(<span class='string'>&quot;foo&quot;</span>);
+<span class='kw'>let</span> <span class='ident'>version</span> <span class='op'>=</span> <span class='number'>5</span>;
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>touch</span> (<span class='ident'>p</span>).<span class='ident'>v</span>((<span class='ident'>version</span>))<span class='string'>&quot;.special edition&quot;</span>)</pre>
+
+<p>This is roughly equivalent to <code>(format!(...))</code>, but the macro version
+can handle <code>OsStr</code>s (such as <code>Path</code>).</p>
+
+<p>Please note that this is <strong>not</strong> supported by <code>cmd!</code>, which would evaluate
+every part as <em>separate</em> argument.</p>
+
+<h2 id='' class='section-header'><a href='#'><code>{}</code>*</a></h2>
+<p>Empty <code>{}</code> is treated as <code>&quot;{}&quot;</code>. This is handy when using commands like <code>find</code>.
+There has to be no space between braces.</p>
+
+<h2 id='if' class='section-header'><a href='#if'>If</a></h2>
+<p>The <code>if</code> token should be surrounded by whitespace.
+The expression (and pattern in if-let) is parsed as Rust,
+the inside of {block} is parsed using regular <code>commmand!</code> syntax
+and can evaluate to multiple arguments (or 0).
+The following should pass <code>--number</code> <code>5</code> to command <code>foo</code>.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>bar</span> <span class='op'>=</span> <span class='number'>5</span>;
+<span class='kw'>let</span> <span class='ident'>option</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='number'>5</span>);
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>foo</span>
+    <span class='kw'>if</span> <span class='ident'>bar</span> <span class='op'>&gt;</span> <span class='number'>10</span> { <span class='ident'>zzz</span> }
+    <span class='kw'>else</span> <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>a</span>) <span class='op'>=</span> <span class='ident'>option</span> { <span class='op'>-</span><span class='op'>-</span><span class='ident'>number</span> ((<span class='ident'>a</span>)) }
+).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<p><code>cmd!</code> limitations: <code>else if</code> is not supported, expression has to be in parens.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>foo</span>
+    <span class='kw'>if</span> (<span class='ident'>bar</span> <span class='op'>&gt;</span> <span class='number'>10</span>) { <span class='ident'>zzz</span> }
+    <span class='kw'>else</span> { <span class='kw'>if</span> <span class='kw'>let</span> <span class='prelude-val'>Some</span>(<span class='ident'>a</span>) <span class='op'>=</span> (<span class='ident'>option</span>) { (<span class='string'>&quot;--number&quot;</span>) ((<span class='ident'>a</span>)) } }
+).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
+
+<h2 id='match' class='section-header'><a href='#match'>Match</a></h2>
+<p>The <code>match</code> token should be surrounded by whitespace.
+The expression and patterns are parsed as Rust.
+On the right side of <code>=&gt;</code> there should be a {block},
+which will be parsed (similarly to if blocks)
+using regular <code>command!</code> syntax.</p>
+
+<p>This example will pass a single argument <code>yes</code> to <code>foo</code> command.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>option</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='number'>5</span>);
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>foo</span>
+    <span class='kw'>match</span> <span class='ident'>option</span> {
+        <span class='prelude-val'>Some</span>(<span class='ident'>x</span>) <span class='kw'>if</span> <span class='ident'>x</span> <span class='op'>&gt;</span> <span class='number'>10</span> <span class='op'>=&gt;</span> {}
+        _ <span class='op'>=&gt;</span> { <span class='ident'>yes</span> }
+    }
+).<span class='ident'>status</span>().<span class='ident'>unwrap</span>()</pre>
+
+<p><code>cmd!</code> limitation: expression after <code>match</code> has to be in parens.</p>
+
+<h2 id='for' class='section-header'><a href='#for'>For</a></h2>
+<p>The <code>for</code> token should be surrounded by whitespace.
+The expression and patterns are parsed as Rust.
+The interior of block is parsed using <code>command!</code> syntax,
+and will be evaluated in every iteration.</p>
+
+<p>This example will pass three arguments <code>1</code> <code>2</code> <code>3</code>.</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>echo</span>
+    <span class='kw'>for</span> <span class='ident'>x</span> <span class='kw'>in</span> <span class='number'>1</span>..<span class='number'>4</span> {
+        ((<span class='ident'>x</span>))
+    }
+).<span class='ident'>status</span>().<span class='ident'>unwrap</span>()</pre>
+</div><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='macro' href='macro.cmd!.html'
+                                  title='command_macros::cmd!'>cmd!</a></td>
+                           <td class='docblock short'>
+                                <p>Simple macro for creating <code>Command</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='macro' href='macro.command!.html'
+                                  title='command_macros::command!'>command!</a></td>
+                           <td class='docblock short'>
+                                <p>Full-featured macro for creating <code>Command</code></p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.plugin_registrar.html'
+                                  title='command_macros::plugin_registrar'>plugin_registrar</a></td>
+                           <td class='docblock short'>
+                                
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "command_macros";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

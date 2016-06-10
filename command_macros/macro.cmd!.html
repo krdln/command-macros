@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `cmd!` macro in crate `command_macros`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, cmd!">
+
+    <title>command_macros::cmd! - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>command_macros</a></p><script>window.sidebarCurrent = {name: 'cmd!', ty: 'macro', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content macro">
+<h1 class='fqn'><span class='in-band'><a href='index.html'>command_macros</a>::<wbr><a class='macro' href=''>cmd!</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-287' class='srclink' href='../src/command_macros/src/lib.rs.html#264-353' title='goto source code'>[src]</a></span></h1>
+<pre class='rust macro'>
+<span class='macro'>macro_rules</span><span class='macro'>!</span> <span class='ident'>cmd</span> {
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>}) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} ((<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>)) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>expr</span>) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} [<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>aa</span>:<span class='ident'>expr</span>] $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>match</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>m</span>:<span class='ident'>expr</span>) { $($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span>)<span class='op'>|</span><span class='op'>+</span> $(<span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>g</span>:<span class='ident'>expr</span>)<span class='op'>*</span> <span class='op'>=&gt;</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rr</span>:<span class='ident'>tt</span>)<span class='op'>*</span>} ),<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>match</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>m</span>:<span class='ident'>expr</span>) { $($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span>)<span class='op'>|</span><span class='op'>+</span> $(<span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>g</span>:<span class='ident'>expr</span>)<span class='op'>*</span> <span class='op'>=&gt;</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rr</span>:<span class='ident'>tt</span>)<span class='op'>*</span>},)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>match</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>m</span>:<span class='ident'>expr</span>) { $($(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span>)<span class='op'>|</span><span class='op'>+</span> $(<span class='kw'>if</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>g</span>:<span class='ident'>expr</span>)<span class='op'>*</span> <span class='op'>=&gt;</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rr</span>:<span class='ident'>tt</span>)<span class='op'>*</span>} )<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>if</span> <span class='kw'>let</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span> <span class='op'>=</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>m</span>:<span class='ident'>expr</span>) { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>then</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } <span class='kw'>else</span> { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>els</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>if</span> <span class='kw'>let</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span> <span class='op'>=</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>m</span>:<span class='ident'>expr</span>) { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>then</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>if</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>) { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>then</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } <span class='kw'>else</span> { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>els</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>if</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>b</span>:<span class='ident'>expr</span>) { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>then</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='kw'>for</span> <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>p</span>:<span class='ident'>pat</span> <span class='kw'>in</span> (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>expr</span>) { $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>body</span>:<span class='ident'>tt</span>)<span class='op'>*</span> } $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} <span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>:<span class='ident'>ident</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    ((<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>:<span class='ident'>expr</span>) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+    (<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>c</span>:<span class='ident'>ident</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> { ... };
+}</pre>
+<div class='docblock'><p>Simple macro for creating <code>Command</code>.</p>
+
+<p>Please read the syntax description in the crate&#39;s <a href="index.html">documentation</a>.</p>
+
+<p>Please note that this macro is <strong>not</strong> whitespace-sensitive and the following
+will evaluate to four separate arguments (as opposed to one in <code>command!</code>):</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span> (<span class='ident'>foo</span>)(<span class='ident'>bar</span>)<span class='ident'>baz</span>(<span class='ident'>qux</span>)) <span class='comment'>// don&#39;t do it!</span></pre>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span> <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>command_macros</span>;
+
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='macro'>cmd</span><span class='macro'>!</span>( <span class='ident'>echo</span> ((<span class='number'>2</span><span class='op'>+</span><span class='number'>2</span>)) ).<span class='ident'>status</span>.<span class='ident'>unwrap</span>();
+}</pre>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "command_macros";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>
