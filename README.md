@@ -1,7 +1,7 @@
 # command-macros
 
 [**documentation**](http://krdln.github.io/command-macros/command_macros/index.html),
-[**crate**](https://github.com/krdln/command-macros)
+[**crate**](https://crates.io/crates/command-macros)
 
 Macros for creating [`std::process::Command`](https://static.rust-lang.org/doc/master/std/process/struct.Command.html)
 with shell-like syntax.

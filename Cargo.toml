@@ -9,7 +9,7 @@ documentation = "http://krdln.github.io/command-macros/command_macros/index.html
 homepage = "https://github.com/krdln/command-macros"
 repository = "https://github.com/krdln/command-macros"
 readme = "README.md"
-keywords = ["command", "macro", "shell", "process", "dsl", "script"]
+keywords = ["command", "macro", "shell", "process", "dsl"]
 license = "MIT"
 
 [lib]
