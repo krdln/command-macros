@@ -292,11 +292,11 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
         if let Token::Literal(lit, _) = self.p.token {
             match lit {
                 Lit::Char(..) | Lit::Str_(..) | Lit::StrRaw(..) => {
-                    match self.p.parse_lit_token() {
-                        Ok(LitKind::Char(c)) => {
+                    match self.p.parse_lit().unwrap().node {
+                        LitKind::Char(c) => {
                             return Ok((c.to_string(), false))
                         }
-                        Ok(LitKind::Str(s, _)) => {
+                        LitKind::Str(s, _) => {
                             return Ok((s.to_string(), true))
                         }
                         _ => unreachable!()
@@ -469,10 +469,12 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             }
 
             let mut is_parenparen = false;
-            if let [TokenTree::Delimited(_, ref d)] = delimited.tts[..] {
-                if delimited.delim == DelimToken::Paren && d.delim == DelimToken::Paren {
-                    delimited = d;
-                    is_parenparen = true;
+            if delimited.tts.len() == 1 {
+                if let TokenTree::Delimited(_, ref d) = delimited.tts[0] {
+                    if delimited.delim == DelimToken::Paren && d.delim == DelimToken::Paren {
+                        delimited = d;
+                        is_parenparen = true;
+                    }
                 }
             }
 

@@ -221,7 +221,6 @@
     feature(
         plugin_registrar,
         rustc_private,
-        slice_patterns,
         question_mark,
         quote,
     ),

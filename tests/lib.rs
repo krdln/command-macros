@@ -79,6 +79,8 @@ mod plugin {
     #[test]
     fn parenparen() {
         quicktest(command!(echo ((2+2))), "4");
+        fn inc(x: i32) -> String { (x + 1).to_string() };
+        quicktest(command!(echo ((inc)(3))), "4");
     }
 
     #[test]

@@ -16,15 +16,14 @@ but requires nightly, and a simpler [`cmd!()`](#cmd), built by `macro_rules`.
 
 This macro requires nighlty Rust and
 enabling a "nightly" feature.
+The oldest supported nightly is 2016-03-09.
 Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies.command-macros]
-version = "0.1.1"
+version = "0.1.2"
 features = ["nightly"]
 ```
-
-When using nightly from before 2016-06-10 use `version = "0.1.0"`.
 
 And then add on top of your root module:
 ```rust
