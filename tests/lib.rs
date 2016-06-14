@@ -117,4 +117,9 @@ mod plugin {
         let _cmd = 42;
         quicktest(command![echo ((_cmd))], "42");
     }
+
+    #[test]
+    fn flags_warn() {
+        quicktest(command![echo . (--flag) (+c)], ". --flag +c");
+    }
 }

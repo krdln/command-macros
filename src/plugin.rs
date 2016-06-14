@@ -483,6 +483,28 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
                 return Err(())
             }
 
+            if delimited.delim == DelimToken::Paren {
+                if let TokenTree::Token(_, Token::BinOp(op)) = delimited.tts[0] {
+                    if op == token::BinOpToken::Minus || op == token::BinOpToken::Plus {
+                        match {
+                            let mut p = Parser::new(self.cx, &delimited.tts);
+                            let ret = p.parse_word(String::new())?;
+                            if p.p.token == Token::Eof { Some(ret) }
+                            else { None }
+                        } {
+                            Some(tree) => {
+                                self.cx.span_warn(span, "Unnecessary parentheses, flags can be naked");
+                                return Ok(tree);
+                            }
+                            None => {
+                                self.cx.span_err(span, "Remove these parentheses, or use ((integer_expression))");
+                                return Err(());
+                            }
+                        }
+                    }
+                }
+            }
+
             let mut p = self.cx.new_parser_from_tts(&delimited.tts);
             let expr = p.parse_expr().map_err(|mut e| e.emit())?;
 

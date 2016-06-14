@@ -127,6 +127,30 @@
 //!
 //! `cmd!` workaround: `("--flag")`.
 //!
+//! ## `(-flags)`
+//!
+//! When your flag contains only `-+=,.;:`
+//! and idents, you can omit the quotes. The flag has to start
+//! with `-` or `+`.
+//!
+//! This is only necessary for `cmd!`,
+//! when using `command!`, it will generate warning,
+//! as you can just remove the surrounding parens.
+//!
+//! So instead
+//!
+//! ```ignore
+//! cmd!(foo ("--bar=baz"))
+//! ```
+//!
+//! you can write
+//!
+//! ```ignore
+//! cmd!(foo (--bar=baz)
+//! ```
+//!
+//! Please note that all whitespace will be ignored.
+//!
 //! ## Multi-part arguments\*
 //!
 //! You can mix `((e))`, `(e)`, tokens and strings within a single
@@ -273,6 +297,27 @@ macro_rules! cmd {
         }
     };
 
+    // (-flag)
+    (@stringify {}) => { "" };
+    (@stringify {- $($rest:tt)*}) => { concat!("-", cmd!(@stringify {$($rest)*})) };
+    (@stringify {+ $($rest:tt)*}) => { concat!("+", cmd!(@stringify {$($rest)*})) };
+    (@stringify {= $($rest:tt)*}) => { concat!("=", cmd!(@stringify {$($rest)*})) };
+    (@stringify {, $($rest:tt)*}) => { concat!(",", cmd!(@stringify {$($rest)*})) };
+    (@stringify {. $($rest:tt)*}) => { concat!(".", cmd!(@stringify {$($rest)*})) };
+    (@stringify {; $($rest:tt)*}) => { concat!(";", cmd!(@stringify {$($rest)*})) };
+    (@stringify {: $($rest:tt)*}) => { concat!(":", cmd!(@stringify {$($rest)*})) };
+    (@stringify {$i:ident $($rest:tt)*}) => {
+        // "soon'ah"
+        // stringify!($i)
+        concat!(stringify!($i), cmd!(@stringify {$($rest)*}))
+    };
+    ({$e:expr} (-$($tts:tt)*) $($tail:tt)*) => {
+        cmd!({$e} (cmd!(@stringify {-$($tts)*})) $($tail)*)
+    };
+    ({$e:expr} (+$($tts:tt)*) $($tail:tt)*) => {
+        cmd!({$e} (cmd!(@stringify {+$($tts)*})) $($tail)*)
+    };
+
     // arg splice
     ({$e:expr} ($a:expr) $($tail:tt)*) => 
     {
@@ -380,9 +425,9 @@ fn ffmpeg() {
     let preset = "slow";
     let tmpname = "tmp.mkv";
     let output = cmd!(echo
-            ("-i") (file)
-            ("-c:v") libx264 ("-preset") (preset) [moreargs]
-            ("-c:a") copy
+            (-i) (file)
+            (-c:v) libx264 (-preset) (preset) [moreargs]
+            (-c:a) copy
             (tmpname))
         .output()
         .expect("can't echo");
@@ -499,5 +544,13 @@ fn not_moving() {
     cmd!((s));
     cmd!(((s)));
     cmd!((s));
+}
+
+#[test]
+fn flags() {
+    quicktest(
+        cmd!(echo (".") (-e) (-c:a=aac) (+a:b;c,d.txt)),
+        ". -e -c:a=aac +a:b;c,d.txt",
+    );
 }
 

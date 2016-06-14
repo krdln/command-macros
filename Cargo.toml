@@ -1,6 +1,6 @@
 [package]
 name = "command-macros"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
 
 description = "Macros for creating std::process::Command with shell-like syntax"

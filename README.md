@@ -21,7 +21,7 @@ Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies.command-macros]
-version = "0.1.2"
+version = "0.1.3"
 features = ["nightly"]
 ```
 
@@ -107,9 +107,13 @@ This macro is a "lite" version of the `command!`.
 Differences:
 * Worse error messages.
 * It is whitespace-insensitive.
-* Creating arguments from arbitrary tokens (`-c:a`) is not supported (only idents).
+* Creating arguments from arbitrary tokens (such as `-c:a`) is not supported (only idents).
+  The workaround is to use Rust string as an expression: `("-c:a")`. You can
+  also omit the quotes for flag-like arguments: `(-c:a)` (flag-like means starting with `-` or `+` and
+  containing only `-=+,.;:` and idents).
 * `((expr))` and `(expr)` always evaluate to full argument (no tricks like `file:(filename)`).
 * Expressions in `if`, `match` and `for` have to be surrounded by parens.
+* No support for `else if` (use `else { if ... }` instead).
 
 Besides, all other features should work.
 
@@ -119,14 +123,14 @@ Examples from `command!` section rewritten to match `cmd!` syntax:
 
 ```rust
 command!(
-    ffmpeg ("-i") (file)
-    ("-c:v") libx264 ("-preset") (preset) [moreargs]
-    ("-c:a") copy
+    ffmpeg (-i) (file)
+    (-c:v) libx264 (-preset) (preset) [moreargs]
+    (-c:a) copy
     (format!("file:{}", tmpname))
 ).status().unwrap();
 ```
 
 ```rust
 command!(make
-    if let Some(n) = (n_cores) { ("-j") ((n + 1)) }
+    if let Some(n) = (n_cores) { (-j) ((n + 1)) }
 ).status().unwrap();
