@@ -548,6 +548,30 @@
 <span id="504">504</span>
 <span id="505">505</span>
 <span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>syntax</span>::<span class='ident'>ptr</span>::<span class='ident'>P</span>;
 <span class='kw'>use</span> <span class='ident'>syntax</span>::<span class='ident'>codemap</span>::{<span class='ident'>Span</span>, <span class='ident'>Spanned</span>, <span class='ident'>respan</span>, <span class='ident'>DUMMY_SP</span>};
@@ -797,19 +821,19 @@
     }
 
     <span class='kw'>fn</span> <span class='ident'>check_opening</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-        <span class='kw'>if</span> <span class='kw'>let</span> <span class='ident'>Token</span>::<span class='ident'>OpenDelim</span>(_) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>token</span> { <span class='boolvalue'>true</span> }
-        <span class='kw'>else</span> { <span class='boolvalue'>false</span> }
+        <span class='kw'>if</span> <span class='kw'>let</span> <span class='ident'>Token</span>::<span class='ident'>OpenDelim</span>(_) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>token</span> { <span class='bool-val'>true</span> }
+        <span class='kw'>else</span> { <span class='bool-val'>false</span> }
     }
 
     <span class='kw'>fn</span> <span class='ident'>touches_next</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-        <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>token</span> <span class='op'>==</span> <span class='ident'>Token</span>::<span class='ident'>Eof</span> { <span class='boolvalue'>false</span> }
+        <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>token</span> <span class='op'>==</span> <span class='ident'>Token</span>::<span class='ident'>Eof</span> { <span class='bool-val'>false</span> }
         <span class='kw'>else</span> { <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>last_span</span>.<span class='ident'>hi</span> <span class='op'>==</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>span</span>.<span class='ident'>lo</span> }
     }
 
     <span class='kw'>fn</span> <span class='ident'>parse_word</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>already</span>: <span class='ident'>String</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>Spanned</span><span class='op'>&lt;</span><span class='ident'>Tree</span><span class='op'>&gt;</span>, ()<span class='op'>&gt;</span> {
         <span class='kw'>let</span> <span class='ident'>start_span</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>span</span>;
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>word</span> <span class='op'>=</span> <span class='ident'>already</span>;
-        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>has_string_literal</span> <span class='op'>=</span> <span class='boolvalue'>false</span>;
+        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>has_string_literal</span> <span class='op'>=</span> <span class='bool-val'>false</span>;
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>n_tokens</span> <span class='op'>=</span> <span class='number'>0</span>;
         <span class='kw'>loop</span> {
             <span class='kw'>if</span> <span class='self'>self</span>.<span class='ident'>check_opening</span>() {
@@ -843,12 +867,12 @@
         <span class='kw'>if</span> <span class='kw'>let</span> <span class='ident'>Token</span>::<span class='ident'>Literal</span>(<span class='ident'>lit</span>, _) <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>token</span> {
             <span class='kw'>match</span> <span class='ident'>lit</span> {
                 <span class='ident'>Lit</span>::<span class='ident'>Char</span>(..) <span class='op'>|</span> <span class='ident'>Lit</span>::<span class='ident'>Str_</span>(..) <span class='op'>|</span> <span class='ident'>Lit</span>::<span class='ident'>StrRaw</span>(..) <span class='op'>=&gt;</span> {
-                    <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>parse_lit_token</span>() {
-                        <span class='prelude-val'>Ok</span>(<span class='ident'>LitKind</span>::<span class='ident'>Char</span>(<span class='ident'>c</span>)) <span class='op'>=&gt;</span> {
-                            <span class='kw'>return</span> <span class='prelude-val'>Ok</span>((<span class='ident'>c</span>.<span class='ident'>to_string</span>(), <span class='boolvalue'>false</span>))
+                    <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>parse_lit</span>().<span class='ident'>unwrap</span>().<span class='ident'>node</span> {
+                        <span class='ident'>LitKind</span>::<span class='ident'>Char</span>(<span class='ident'>c</span>) <span class='op'>=&gt;</span> {
+                            <span class='kw'>return</span> <span class='prelude-val'>Ok</span>((<span class='ident'>c</span>.<span class='ident'>to_string</span>(), <span class='bool-val'>false</span>))
                         }
-                        <span class='prelude-val'>Ok</span>(<span class='ident'>LitKind</span>::<span class='ident'>Str</span>(<span class='ident'>s</span>, _)) <span class='op'>=&gt;</span> {
-                            <span class='kw'>return</span> <span class='prelude-val'>Ok</span>((<span class='ident'>s</span>.<span class='ident'>to_string</span>(), <span class='boolvalue'>true</span>))
+                        <span class='ident'>LitKind</span>::<span class='ident'>Str</span>(<span class='ident'>s</span>, _) <span class='op'>=&gt;</span> {
+                            <span class='kw'>return</span> <span class='prelude-val'>Ok</span>((<span class='ident'>s</span>.<span class='ident'>to_string</span>(), <span class='bool-val'>true</span>))
                         }
                         _ <span class='op'>=&gt;</span> <span class='macro'>unreachable</span><span class='macro'>!</span>()
                     }
@@ -864,7 +888,7 @@
         }
         <span class='kw'>let</span> <span class='ident'>stringified</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>cx</span>.<span class='ident'>parse_sess</span>.<span class='ident'>codemap</span>().<span class='ident'>span_to_snippet</span>(<span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>span</span>).<span class='ident'>unwrap</span>();
         <span class='self'>self</span>.<span class='ident'>p</span>.<span class='ident'>bump</span>();
-        <span class='prelude-val'>Ok</span>((<span class='ident'>stringified</span>, <span class='boolvalue'>false</span>))
+        <span class='prelude-val'>Ok</span>((<span class='ident'>stringified</span>, <span class='bool-val'>false</span>))
     }
     
     <span class='kw'>fn</span> <span class='ident'>parse_naked_keyword</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='prelude-ty'>Result</span><span class='op'>&lt;</span><span class='ident'>bool</span>, ()<span class='op'>&gt;</span> {
@@ -878,9 +902,9 @@
                 );
                 <span class='kw'>return</span> <span class='prelude-val'>Err</span>(())
             }
-            <span class='prelude-val'>Ok</span>(<span class='boolvalue'>false</span>)
+            <span class='prelude-val'>Ok</span>(<span class='bool-val'>false</span>)
         } <span class='kw'>else</span> {
-            <span class='prelude-val'>Ok</span>(<span class='boolvalue'>true</span>)
+            <span class='prelude-val'>Ok</span>(<span class='bool-val'>true</span>)
         }
     }
 
@@ -1019,17 +1043,41 @@
                 <span class='kw'>return</span> <span class='prelude-val'>Ok</span>(<span class='ident'>respan</span>(<span class='ident'>span</span>, <span class='ident'>Tree</span>::<span class='ident'>Word</span>(<span class='string'>&quot;{}&quot;</span>.<span class='ident'>into</span>())))
             }
 
-            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>is_parenparen</span> <span class='op'>=</span> <span class='boolvalue'>false</span>;
-            <span class='kw'>if</span> <span class='kw'>let</span> [<span class='ident'>TokenTree</span>::<span class='ident'>Delimited</span>(_, <span class='kw-2'>ref</span> <span class='ident'>d</span>)] <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='ident'>delimited</span>.<span class='ident'>tts</span>[..] {
-                <span class='kw'>if</span> <span class='ident'>delimited</span>.<span class='ident'>delim</span> <span class='op'>==</span> <span class='ident'>DelimToken</span>::<span class='ident'>Paren</span> <span class='op'>&amp;&amp;</span> <span class='ident'>d</span>.<span class='ident'>delim</span> <span class='op'>==</span> <span class='ident'>DelimToken</span>::<span class='ident'>Paren</span> {
-                    <span class='ident'>delimited</span> <span class='op'>=</span> <span class='ident'>d</span>;
-                    <span class='ident'>is_parenparen</span> <span class='op'>=</span> <span class='boolvalue'>true</span>;
+            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>is_parenparen</span> <span class='op'>=</span> <span class='bool-val'>false</span>;
+            <span class='kw'>if</span> <span class='ident'>delimited</span>.<span class='ident'>tts</span>.<span class='ident'>len</span>() <span class='op'>==</span> <span class='number'>1</span> {
+                <span class='kw'>if</span> <span class='kw'>let</span> <span class='ident'>TokenTree</span>::<span class='ident'>Delimited</span>(_, <span class='kw-2'>ref</span> <span class='ident'>d</span>) <span class='op'>=</span> <span class='ident'>delimited</span>.<span class='ident'>tts</span>[<span class='number'>0</span>] {
+                    <span class='kw'>if</span> <span class='ident'>delimited</span>.<span class='ident'>delim</span> <span class='op'>==</span> <span class='ident'>DelimToken</span>::<span class='ident'>Paren</span> <span class='op'>&amp;&amp;</span> <span class='ident'>d</span>.<span class='ident'>delim</span> <span class='op'>==</span> <span class='ident'>DelimToken</span>::<span class='ident'>Paren</span> {
+                        <span class='ident'>delimited</span> <span class='op'>=</span> <span class='ident'>d</span>;
+                        <span class='ident'>is_parenparen</span> <span class='op'>=</span> <span class='bool-val'>true</span>;
+                    }
                 }
             }
 
             <span class='kw'>if</span> <span class='ident'>delimited</span>.<span class='ident'>tts</span>.<span class='ident'>is_empty</span>() {
                 <span class='self'>self</span>.<span class='ident'>cx</span>.<span class='ident'>span_err</span>(<span class='ident'>span</span>, <span class='string'>&quot;Rust expression expected inside this block&quot;</span>);
                 <span class='kw'>return</span> <span class='prelude-val'>Err</span>(())
+            }
+
+            <span class='kw'>if</span> <span class='ident'>delimited</span>.<span class='ident'>delim</span> <span class='op'>==</span> <span class='ident'>DelimToken</span>::<span class='ident'>Paren</span> {
+                <span class='kw'>if</span> <span class='kw'>let</span> <span class='ident'>TokenTree</span>::<span class='ident'>Token</span>(_, <span class='ident'>Token</span>::<span class='ident'>BinOp</span>(<span class='ident'>op</span>)) <span class='op'>=</span> <span class='ident'>delimited</span>.<span class='ident'>tts</span>[<span class='number'>0</span>] {
+                    <span class='kw'>if</span> <span class='ident'>op</span> <span class='op'>==</span> <span class='ident'>token</span>::<span class='ident'>BinOpToken</span>::<span class='ident'>Minus</span> <span class='op'>||</span> <span class='ident'>op</span> <span class='op'>==</span> <span class='ident'>token</span>::<span class='ident'>BinOpToken</span>::<span class='ident'>Plus</span> {
+                        <span class='kw'>match</span> {
+                            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>p</span> <span class='op'>=</span> <span class='ident'>Parser</span>::<span class='ident'>new</span>(<span class='self'>self</span>.<span class='ident'>cx</span>, <span class='kw-2'>&amp;</span><span class='ident'>delimited</span>.<span class='ident'>tts</span>);
+                            <span class='kw'>let</span> <span class='ident'>ret</span> <span class='op'>=</span> <span class='ident'>p</span>.<span class='ident'>parse_word</span>(<span class='ident'>String</span>::<span class='ident'>new</span>())?;
+                            <span class='kw'>if</span> <span class='ident'>p</span>.<span class='ident'>p</span>.<span class='ident'>token</span> <span class='op'>==</span> <span class='ident'>Token</span>::<span class='ident'>Eof</span> { <span class='prelude-val'>Some</span>(<span class='ident'>ret</span>) }
+                            <span class='kw'>else</span> { <span class='prelude-val'>None</span> }
+                        } {
+                            <span class='prelude-val'>Some</span>(<span class='ident'>tree</span>) <span class='op'>=&gt;</span> {
+                                <span class='self'>self</span>.<span class='ident'>cx</span>.<span class='ident'>span_warn</span>(<span class='ident'>span</span>, <span class='string'>&quot;Unnecessary parentheses, flags can be naked&quot;</span>);
+                                <span class='kw'>return</span> <span class='prelude-val'>Ok</span>(<span class='ident'>tree</span>);
+                            }
+                            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> {
+                                <span class='self'>self</span>.<span class='ident'>cx</span>.<span class='ident'>span_err</span>(<span class='ident'>span</span>, <span class='string'>&quot;Remove these parentheses, or use ((integer_expression))&quot;</span>);
+                                <span class='kw'>return</span> <span class='prelude-val'>Err</span>(());
+                            }
+                        }
+                    }
+                }
             }
 
             <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>p</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>cx</span>.<span class='ident'>new_parser_from_tts</span>(<span class='kw-2'>&amp;</span><span class='ident'>delimited</span>.<span class='ident'>tts</span>);

@@ -546,6 +546,58 @@
 <span id="502">502</span>
 <span id="503">503</span>
 <span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! Macros for creating</span>
 <span class='doccomment'>//! [`std::process::Command`](https://static.rust-lang.org/doc/master/std/process/struct.Command.html)</span>
@@ -676,6 +728,30 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! `cmd!` workaround: `(&quot;--flag&quot;)`.</span>
 <span class='doccomment'>//!</span>
+<span class='doccomment'>//! ## `(-flags)`</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! When your flag contains only `-+=,.;:`</span>
+<span class='doccomment'>//! and idents, you can omit the quotes. The flag has to start</span>
+<span class='doccomment'>//! with `-` or `+`.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! This is only necessary for `cmd!`,</span>
+<span class='doccomment'>//! when using `command!`, it will generate warning,</span>
+<span class='doccomment'>//! as you can just remove the surrounding parens.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! So instead</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ```ignore</span>
+<span class='doccomment'>//! cmd!(foo (&quot;--bar=baz&quot;))</span>
+<span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! you can write</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ```ignore</span>
+<span class='doccomment'>//! cmd!(foo (--bar=baz)</span>
+<span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! Please note that all whitespace will be ignored.</span>
+<span class='doccomment'>//! </span>
 <span class='doccomment'>//! ## Multi-part arguments\*</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! You can mix `((e))`, `(e)`, tokens and strings within a single</span>
@@ -770,7 +846,6 @@
     <span class='ident'>feature</span>(
         <span class='ident'>plugin_registrar</span>,
         <span class='ident'>rustc_private</span>,
-        <span class='ident'>slice_patterns</span>,
         <span class='ident'>question_mark</span>,
         <span class='ident'>quote</span>,
     ),
@@ -821,6 +896,27 @@
             <span class='ident'>cmd</span>.<span class='ident'>arg</span>((<span class='kw-2'>&amp;</span><span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>a</span>).<span class='ident'>to_string</span>());
             <span class='macro'>cmd</span><span class='macro'>!</span>( {<span class='ident'>cmd</span>} $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span> )
         }
+    };
+
+    <span class='comment'>// (-flag)</span>
+    (@<span class='ident'>stringify</span> {}) <span class='op'>=&gt;</span> { <span class='string'>&quot;&quot;</span> };
+    (@<span class='ident'>stringify</span> {<span class='op'>-</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='macro'>stringify</span><span class='macro'>!</span>(<span class='op'>-</span>), <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {<span class='op'>+</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;+&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {<span class='op'>=</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;=&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {, $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;,&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {. $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;.&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {; $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;;&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {: $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> { <span class='macro'>concat</span><span class='macro'>!</span>(<span class='string'>&quot;:&quot;</span>, <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>})) };
+    (@<span class='ident'>stringify</span> {<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>:<span class='ident'>ident</span> $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>:<span class='ident'>tt</span>)<span class='op'>*</span>}) <span class='op'>=&gt;</span> {
+        <span class='comment'>// &quot;soon&#39;ah&quot;</span>
+        <span class='comment'>// stringify!($i)</span>
+        <span class='macro'>concat</span><span class='macro'>!</span>(<span class='macro'>stringify</span><span class='macro'>!</span>(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>i</span>), <span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>rest</span>)<span class='op'>*</span>}))
+    };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} (<span class='op'>-</span>$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='macro'>cmd</span><span class='macro'>!</span>({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>} (<span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {<span class='op'>-</span>$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>)<span class='op'>*</span>})) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>)
+    };
+    ({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>:<span class='ident'>expr</span>} (<span class='op'>+</span>$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>:<span class='ident'>tt</span>)<span class='op'>*</span>) <span class='op'>=&gt;</span> {
+        <span class='macro'>cmd</span><span class='macro'>!</span>({<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>e</span>} (<span class='macro'>cmd</span><span class='macro'>!</span>(@<span class='ident'>stringify</span> {<span class='op'>+</span>$(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tts</span>)<span class='op'>*</span>})) $(<span class='macro-nonterminal'>$</span><span class='macro-nonterminal'>tail</span>)<span class='op'>*</span>)
     };
 
     <span class='comment'>// arg splice</span>
@@ -930,9 +1026,9 @@
     <span class='kw'>let</span> <span class='ident'>preset</span> <span class='op'>=</span> <span class='string'>&quot;slow&quot;</span>;
     <span class='kw'>let</span> <span class='ident'>tmpname</span> <span class='op'>=</span> <span class='string'>&quot;tmp.mkv&quot;</span>;
     <span class='kw'>let</span> <span class='ident'>output</span> <span class='op'>=</span> <span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span>
-            (<span class='string'>&quot;-i&quot;</span>) (<span class='ident'>file</span>)
-            (<span class='string'>&quot;-c:v&quot;</span>) <span class='ident'>libx264</span> (<span class='string'>&quot;-preset&quot;</span>) (<span class='ident'>preset</span>) [<span class='ident'>moreargs</span>]
-            (<span class='string'>&quot;-c:a&quot;</span>) <span class='ident'>copy</span>
+            (<span class='op'>-</span><span class='ident'>i</span>) (<span class='ident'>file</span>)
+            (<span class='op'>-</span><span class='ident'>c</span>:<span class='ident'>v</span>) <span class='ident'>libx264</span> (<span class='op'>-</span><span class='ident'>preset</span>) (<span class='ident'>preset</span>) [<span class='ident'>moreargs</span>]
+            (<span class='op'>-</span><span class='ident'>c</span>:<span class='ident'>a</span>) <span class='ident'>copy</span>
             (<span class='ident'>tmpname</span>))
         .<span class='ident'>output</span>()
         .<span class='ident'>expect</span>(<span class='string'>&quot;can&#39;t echo&quot;</span>);
@@ -999,7 +1095,7 @@
 <span class='kw'>fn</span> <span class='ident'>ifelse</span>() {
     <span class='ident'>quicktest</span>(
         <span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span>
-            <span class='kw'>if</span> (<span class='boolvalue'>true</span>) { <span class='ident'>abc</span> (<span class='number'>1</span>.<span class='ident'>to_string</span>()) }
+            <span class='kw'>if</span> (<span class='bool-val'>true</span>) { <span class='ident'>abc</span> (<span class='number'>1</span>.<span class='ident'>to_string</span>()) }
             <span class='ident'>tail</span>),
         <span class='string'>&quot;abc 1 tail&quot;</span>
     );
@@ -1008,8 +1104,8 @@
     <span class='ident'>quicktest</span>(
         <span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span>
             ({<span class='ident'>counter</span>.<span class='ident'>set</span>(<span class='ident'>counter</span>.<span class='ident'>get</span>() <span class='op'>+</span> <span class='number'>1</span>); <span class='string'>&quot;blah&quot;</span>})
-            <span class='kw'>if</span> (<span class='boolvalue'>true</span>) { <span class='ident'>a</span> } <span class='kw'>else</span> { <span class='ident'>b</span> }
-            <span class='kw'>if</span> (<span class='boolvalue'>false</span>) { <span class='ident'>c</span> } <span class='kw'>else</span> { <span class='ident'>d</span> }
+            <span class='kw'>if</span> (<span class='bool-val'>true</span>) { <span class='ident'>a</span> } <span class='kw'>else</span> { <span class='ident'>b</span> }
+            <span class='kw'>if</span> (<span class='bool-val'>false</span>) { <span class='ident'>c</span> } <span class='kw'>else</span> { <span class='ident'>d</span> }
             <span class='ident'>tail</span>),
         <span class='string'>&quot;blah a d tail&quot;</span>
     );
@@ -1049,6 +1145,14 @@
     <span class='macro'>cmd</span><span class='macro'>!</span>((<span class='ident'>s</span>));
     <span class='macro'>cmd</span><span class='macro'>!</span>(((<span class='ident'>s</span>)));
     <span class='macro'>cmd</span><span class='macro'>!</span>((<span class='ident'>s</span>));
+}
+
+<span class='attribute'>#[<span class='ident'>test</span>]</span>
+<span class='kw'>fn</span> <span class='ident'>flags</span>() {
+    <span class='ident'>quicktest</span>(
+        <span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>echo</span> (<span class='string'>&quot;.&quot;</span>) (<span class='op'>-</span><span class='ident'>e</span>) (<span class='op'>-</span><span class='ident'>c</span>:<span class='ident'>a</span><span class='op'>=</span><span class='ident'>aac</span>) (<span class='op'>+</span><span class='ident'>a</span>:<span class='ident'>b</span>;<span class='ident'>c</span>,<span class='ident'>d</span>.<span class='ident'>txt</span>)),
+        <span class='string'>&quot;. -e -c:a=aac +a:b;c,d.txt&quot;</span>,
+    );
 }
 
 </pre>

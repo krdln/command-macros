@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/command_macros/src/lib.rs.html#1-503' title='goto source code'>[src]</a></span></h1>
+               </span><a id='src-0' class='srclink' href='../src/command_macros/src/lib.rs.html#1-555' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Macros for creating
 <a href="https://static.rust-lang.org/doc/master/std/process/struct.Command.html"><code>std::process::Command</code></a>
 with shell-like syntax.</p>
@@ -145,6 +145,27 @@ three arguments to a <code>foo.2.5</code> command.</p>
 <span class='macro'>command</span><span class='macro'>!</span>(<span class='ident'>foo</span>.<span class='number'>2.5</span> <span class='op'>-</span><span class='op'>-</span><span class='ident'>flag</span>   <span class='op'>-</span><span class='ident'>v</span>:<span class='ident'>c</span> <span class='op'>-=</span><span class='op'>|</span>.<span class='op'>|=</span><span class='op'>-</span>).<span class='ident'>status</span>().<span class='ident'>unwrap</span>();</pre>
 
 <p><code>cmd!</code> workaround: <code>(&quot;--flag&quot;)</code>.</p>
+
+<h2 id='-flags' class='section-header'><a href='#-flags'><code>(-flags)</code></a></h2>
+<p>When your flag contains only <code>-+=,.;:</code>
+and idents, you can omit the quotes. The flag has to start
+with <code>-</code> or <code>+</code>.</p>
+
+<p>This is only necessary for <code>cmd!</code>,
+when using <code>command!</code>, it will generate warning,
+as you can just remove the surrounding parens.</p>
+
+<p>So instead</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>foo</span> (<span class='string'>&quot;--bar=baz&quot;</span>))</pre>
+
+<p>you can write</p>
+
+<pre class='rust rust-example-rendered'>
+<span class='macro'>cmd</span><span class='macro'>!</span>(<span class='ident'>foo</span> (<span class='op'>-</span><span class='op'>-</span><span class='ident'>bar</span><span class='op'>=</span><span class='ident'>baz</span>)</pre>
+
+<p>Please note that all whitespace will be ignored.</p>
 
 <h2 id='multi-part-arguments' class='section-header'><a href='#multi-part-arguments'>Multi-part arguments*</a></h2>
 <p>You can mix <code>((e))</code>, <code>(e)</code>, tokens and strings within a single
