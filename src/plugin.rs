@@ -4,7 +4,9 @@ use syntax::parse::token::{self, Lit, Token, DelimToken};
 use syntax::parse::token::keywords;
 use syntax::parse::token::{intern, intern_and_get_ident};
 use syntax::parse::parser::{self, Restrictions};
-use syntax::ast::{TokenTree, LitKind, Expr, Stmt, Block, Pat, Ident};
+#[cfg(not(nightly_from_2016_07))] use syntax::ast::TokenTree;
+#[cfg(nightly_from_2016_07)] use syntax::tokenstream::TokenTree;
+use syntax::ast::{LitKind, Expr, Stmt, Block, Pat, Ident};
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder;  // trait for expr_usize
 
@@ -40,6 +42,35 @@ pub fn expand_command(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
         Err(()) => DummyResult::expr(sp),
     }
 }
+
+#[cfg(not(nightly_from_2016_07))]
+trait AstBuilderExt: AstBuilder {
+
+    fn block_with_expr(&self, span: Span, stmts: Vec<Stmt>, expr: Option<P<Expr>>) -> P<Block> {
+        self.block(span, stmts, expr)
+    }
+
+    fn stmt_semicolon(&self, expr: P<Expr>) -> Stmt {
+        self.stmt_expr(expr)
+    }
+}
+
+#[cfg(nightly_from_2016_07)]
+trait AstBuilderExt: AstBuilder {
+
+    fn block_with_expr(&self, span: Span, mut stmts: Vec<Stmt>, expr: Option<P<Expr>>) -> P<Block> {
+        if let Some(expr) = expr {
+            stmts.push(self.stmt_expr(expr));
+        }
+        self.block(span, stmts)
+    }
+
+    fn stmt_semicolon(&self, expr: P<Expr>) -> Stmt {
+        self.stmt_semi(expr)
+    }
+}
+
+impl<T: AstBuilder> AstBuilderExt for T {}
 
 enum Condition {
     Bool(P<Expr>),
@@ -98,7 +129,7 @@ fn generate(cx: &mut ExtCtxt, sp: Span, mut trees: Vec<Spanned<Tree>>) -> Result
     let mut stmts: Vec<Stmt> = vec![quote_stmt!(cx, let mut _cmd = $cmd_expr).unwrap()];
     stmts.extend(generate_inner(cx, trees)?);
 
-    Ok(cx.block(span, stmts, Some(quote_expr!(cx, _cmd))))
+    Ok(cx.block_with_expr(span, stmts, Some(quote_expr!(cx, _cmd))))
 }
 
 fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stmt>, ()> {
@@ -147,7 +178,7 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
                 quote_expr!(cx, for $pat in $expr $body)
             }
         };
-        Ok(cx.stmt_expr(x))
+        Ok(cx.stmt_semicolon(x))
     }).collect()
 }
 
@@ -170,7 +201,7 @@ fn generate_os_str(cx: &mut ExtCtxt, Spanned{span, node: tree}: Spanned<Tree>) -
                 let expr = cx.expr_method_call(span, s_expr.clone(), push_ident, vec![inner_expr]);
                 Ok(cx.stmt_expr(expr))
             }).collect::<Result<Vec<_>,_>>()?);
-            let block = cx.block(span, stmts, Some(s_expr.clone()));
+            let block = cx.block_with_expr(span, stmts, Some(s_expr.clone()));
             Ok(cx.expr_block(block))
         }
         _ => {
@@ -184,7 +215,7 @@ fn generate_os_str(cx: &mut ExtCtxt, Spanned{span, node: tree}: Spanned<Tree>) -
 fn generate_block(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<P<Block>, ()> {
     let span = get_trees_span(&trees);
     let stmts = generate_inner(cx, trees)?;
-    Ok(cx.block(span, stmts, None))
+    Ok(cx.block_with_expr(span, stmts, None))
 }
 
 struct Parser<'a, 'b: 'a> {
