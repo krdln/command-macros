@@ -546,7 +546,14 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
                     _ if is_parenparen => Tree::ToStr(expr),
                     DelimToken::Paren => Tree::AsOsStr(expr),
                     DelimToken::Bracket => Tree::Args(expr),
-                    DelimToken::Brace => Tree::Cmd(expr),
+                    DelimToken::Brace if true => Tree::Cmd(expr),
+                    _ => {
+                        // The `if true` above is a hack to allow this code to compile
+                        // on nightlies with DelimToken::NoDelim and without.
+                        // The guard suppresses "unreachable pattern" error.
+                        self.cx.span_err(span, "Block without delimiters encountered.");
+                        return Err(());
+                    }
                 }
             ))
         } else {
