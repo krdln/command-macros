@@ -162,7 +162,7 @@ fn generate_inner(cx: &mut ExtCtxt, trees: Vec<Spanned<Tree>>) -> Result<Vec<Stm
                         arm.guard = guard;
                         Ok(arm)
                     }
-                ).collect()?;
+                ).collect::<Result<_,_>>()?;
                 cx.expr_match(span, expr, arms)
             }
             Tree::If(cond, then, els) => {
