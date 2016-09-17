@@ -249,7 +249,6 @@
         quote,
     ),
 )]
-#![cfg_attr(feature = "nightly", crate_type = "dylib")]
 
 #[cfg(feature = "nightly")] mod plugin;
 
