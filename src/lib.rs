@@ -44,7 +44,7 @@
 //! ```no_run
 //! # #[macro_use] extern crate command_macros;
 //! # fn main() {
-//! let filename = String::new("foo bar");
+//! let filename = String::from("foo bar");
 //! let get_command = || "touch";
 //! cmd!( (get_command()) (filename) ).status().unwrap();
 //! # }
@@ -92,8 +92,8 @@
 //! ```no_run
 //! # #[macro_use] extern crate command_macros;
 //! # fn main() {
-//! let cmd = ::std::process::Command::new("echo");
-//! cmd!( {&mut cmd} bar baz )
+//! let mut cmd = ::std::process::Command::new("echo");
+//! cmd!( {&mut cmd} bar baz ).status().unwrap();
 //! # }
 //! ```
 //!
@@ -280,7 +280,7 @@ pub fn plugin_registrar(reg: &mut rustc_plugin::Registry) {
 /// #[macro_use] extern crate command_macros;
 ///
 /// fn main() {
-///     cmd!( echo ((2+2)) ).status.unwrap();
+///     cmd!( echo ((2+2)) ).status().unwrap();
 /// }
 /// ```
 #[macro_export]
