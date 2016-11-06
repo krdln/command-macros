@@ -224,6 +224,18 @@ struct Parser<'a, 'b: 'a> {
 }
 
 impl<'a, 'b: 'a> Parser<'a, 'b> {
+    #[cfg(not(nightly_from_2016_10_19))]
+    fn get_prev_span(&self) -> Span {
+        self.p.last_span
+    }
+
+    #[cfg(nightly_from_2016_10_19)]
+    fn get_prev_span(&self) -> Span {
+        self.p.prev_span
+    }
+}
+
+impl<'a, 'b: 'a> Parser<'a, 'b> {
     pub fn new(cx: &'a mut ExtCtxt<'b>, tts: &'a[TokenTree]) -> Parser<'a, 'b> {
         let p = cx.new_parser_from_tts(tts);
         Parser { cx: cx, p: p }
@@ -262,7 +274,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             self.p.bump();
             if !self.touches_next() {
                 self.cx.span_err(
-                    self.p.last_span,
+                    self.get_prev_span(),
                     "Let is not supported, you can emulate it by `match` if you really want"
                 );
                 Err(())
@@ -283,7 +295,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
 
     fn touches_next(&self) -> bool {
         if self.p.token == Token::Eof { false }
-        else { self.p.last_span.hi == self.p.span.lo }
+        else { self.get_prev_span().hi == self.p.span.lo }
     }
 
     fn parse_word(&mut self, already: String) -> Result<Spanned<Tree>, ()> {
@@ -310,7 +322,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             }
         }
 
-        let span = span_from_to(start_span, self.p.last_span);
+        let span = span_from_to(start_span, self.get_prev_span());
 
         if has_string_literal && n_tokens != 1 {
             self.cx.span_warn(span, "String literal should cover this whole word");
@@ -398,7 +410,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             }
         ;
         Ok(respan(
-            span_from_to(if_span, self.p.last_span),
+            span_from_to(if_span, self.get_prev_span()),
             Tree::If(condition, then_block, else_block)
         ))
     }
@@ -443,7 +455,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
             if p.p.check(&Token::Comma) { p.p.bump(); }
 
             arms.push(respan(
-                span_from_to(pats[0].span, p.p.last_span),
+                span_from_to(pats[0].span, p.get_prev_span()),
                 (pats, guard, block),
             ));
 
@@ -468,7 +480,7 @@ impl<'a, 'b: 'a> Parser<'a, 'b> {
 
         let body = self.parse_block()?;
         Ok(respan(
-            span_from_to(for_kw_span, self.p.last_span),
+            span_from_to(for_kw_span, self.get_prev_span()),
             Tree::For(pat, expr, body)
         ))
     }
