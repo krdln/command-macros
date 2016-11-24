@@ -13,8 +13,14 @@ fn main() {
                 if &date[..] >= "2016-10-18" {
                     println!("cargo:rustc-cfg=nightly_from_2016_10_19");
                 }
+                if &date[..] >= "2016-11-20" {
+                    println!("cargo:rustc-cfg=nightly_from_2016_11_21");
+                }
             }
         }
         _ => ()
+    }
+    if version_matches("1.14") {
+        println!("cargo:rustc-cfg=stable_question_mark");
     }
 }

@@ -245,10 +245,11 @@
     feature(
         plugin_registrar,
         rustc_private,
-        question_mark,
         quote,
     ),
 )]
+
+#![cfg_attr(not(stable_question_mark), feature(question_mark))]
 
 #[cfg(feature = "nightly")] mod plugin;
 

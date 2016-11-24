@@ -21,7 +21,7 @@ Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies.command-macros]
-version = "0.1.3"
+version = "0.1.9"
 features = ["nightly"]
 ```
 

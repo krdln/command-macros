@@ -1,11 +1,18 @@
 use syntax::ptr::P;
 use syntax::codemap::{Span, Spanned, respan, DUMMY_SP};
 use syntax::parse::token::{self, Lit, Token, DelimToken};
-use syntax::parse::token::keywords;
-use syntax::parse::token::{intern, intern_and_get_ident};
+
 use syntax::parse::parser::{self, Restrictions};
+
+#[cfg(not(nightly_from_2016_11_21))]
+use syntax::parse::token::{keywords, intern, intern_and_get_ident};
+
+#[cfg(nightly_from_2016_11_21)]
+use syntax::symbol::{keywords, Symbol};
+
 #[cfg(not(nightly_from_2016_07))] use syntax::ast::TokenTree;
 #[cfg(nightly_from_2016_07)] use syntax::tokenstream::TokenTree;
+
 use syntax::ast::{LitKind, Expr, Stmt, Block, Pat, Ident};
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult, MacEager};
 use syntax::ext::build::AstBuilder;  // trait for expr_usize
@@ -28,6 +35,14 @@ use syntax::ext::build::AstBuilder;  // trait for expr_usize
 /// ```
 #[macro_export]
 macro_rules! command{ ($($tt:tt)*) => {} }
+
+#[cfg(nightly_from_2016_11_21)]
+pub fn intern(s: &str) -> ::syntax::symbol::Symbol {
+    Symbol::intern(s)
+}
+
+#[cfg(nightly_from_2016_11_21)]
+use self::intern as intern_and_get_ident;
 
 pub fn expand_command(cx: &mut ExtCtxt, sp: Span, args: &[TokenTree])
     -> Box<MacResult + 'static>
