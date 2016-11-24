@@ -249,7 +249,10 @@
     ),
 )]
 
-#![cfg_attr(not(stable_question_mark), feature(question_mark))]
+#![cfg_attr(
+    all(feature = "nightly", not(stable_question_mark)),
+    feature(question_mark)
+)]
 
 #[cfg(feature = "nightly")] mod plugin;
 
