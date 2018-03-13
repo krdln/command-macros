@@ -5,6 +5,9 @@
 //! The `command!` macro is a syntax extension and requires nightly,
 //! the `cmd!` is simpler version built using `macro_rules!`.
 //!
+//! **NOTE: The `command!` macro is currently unsupported!**
+//! (It's going to be reimplemented using procedural macros 2.0)
+//!
 //! This page describes syntax used by both `command!` and `cmd!` macros.
 //! See the [github page](https://github.com/krdln/command-macros) for more general introduction.
 //!

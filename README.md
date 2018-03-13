@@ -12,6 +12,10 @@ but requires nightly, and a simpler [`cmd!()`](#cmd), built by `macro_rules`.
 
 ## `command!`
 
+### NOTE: The `command!` macro is currently unsupported
+
+It's going to be reimplemented using procedural macros 2.0.
+
 ### Installation
 
 This macro requires nighlty Rust and
