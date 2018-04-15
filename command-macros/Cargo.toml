@@ -1,0 +1,21 @@
+[package]
+name = "command-macros"
+version = "0.2.0"
+authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
+
+description = "Macros for creating std::process::Command with shell-like syntax"
+
+documentation = "https://docs.rs/command-macros/0.2.0/command_macros/"
+repository = "https://github.com/krdln/command-macros"
+readme = "README.md"
+keywords = ["command", "macro", "shell", "process", "dsl"]
+license = "MIT"
+
+[package.metadata.docs.rs]
+features = ["nightly"]
+
+[features]
+nightly = ["command-macros-plugin"]
+
+[dependencies]
+command-macros-plugin = { version = "0.2.0", optional = true }

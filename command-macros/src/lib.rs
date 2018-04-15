@@ -5,9 +5,6 @@
 //! The `command!` macro is a syntax extension and requires nightly,
 //! the `cmd!` is simpler version built using `macro_rules!`.
 //!
-//! **NOTE: The `command!` macro is currently unsupported!**
-//! (It's going to be reimplemented using procedural macros 2.0)
-//!
 //! This page describes syntax used by both `command!` and `cmd!` macros.
 //! See the [github page](https://github.com/krdln/command-macros) for more general introduction.
 //!
@@ -71,15 +68,15 @@
 //! ## `[expression]` (args expression)
 //!
 //! Interior of `[ ]` is parsed as Rust expression
-//! which should evaluate to `[T: AsRef<OsStr>]`
-//! (modulo `Deref`).
-//! This expression will be put in `cmd.args(& $expr)`
+//! which should evaluate to `impl IntoIterator<Item=impl AsRef<OsStr>>`,
+//! eg. a vector of strings.
+//! This expression will be put in `cmd.args($expr)`
 //!
 //! ```no_run
 //! # #[macro_use] extern crate command_macros;
 //! # fn main() {
 //! let args: Vec<_> = std::env::args_os().collect();
-//! cmd!( (args[1]) [args[2..]] ).status().unwrap();
+//! cmd!( (args[1]) [&args[2..]] ).status().unwrap();
 //! # }
 //! ```
 //!
@@ -125,34 +122,10 @@
 //! three arguments to a `foo.2.5` command.
 //!
 //! ```ignore
-//! command!(foo.2.5 --flag   -v:c -=|.|=-).status().unwrap();
+//! command!(foo.2.5 --flag   -v:c -=:.:=-).status().unwrap();
 //! ```
 //!
 //! `cmd!` workaround: `("--flag")`.
-//!
-//! ## `(-flags)`
-//!
-//! When your flag contains only `-+=,.;:`
-//! and idents, you can omit the quotes. The flag has to start
-//! with `-` or `+`.
-//!
-//! This is only necessary for `cmd!`,
-//! when using `command!`, it will generate warning,
-//! as you can just remove the surrounding parens.
-//!
-//! So instead
-//!
-//! ```ignore
-//! cmd!(foo ("--bar=baz"))
-//! ```
-//!
-//! you can write
-//!
-//! ```ignore
-//! cmd!(foo (--bar=baz)
-//! ```
-//!
-//! Please note that all whitespace will be ignored.
 //!
 //! ## Multi-part arguments\*
 //!
@@ -243,31 +216,13 @@
 //! ).status().unwrap()
 //! ```
 
-#![cfg_attr(
-    feature = "nightly",
-    feature(
-        plugin_registrar,
-        rustc_private,
-        quote,
-    ),
-)]
-
-#![cfg_attr(
-    all(feature = "nightly", not(stable_question_mark)),
-    feature(question_mark)
-)]
-
-#[cfg(feature = "nightly")] mod plugin;
-
-#[cfg(feature = "nightly")] extern crate syntax;
-#[cfg(feature = "nightly")] extern crate rustc;
-#[cfg(feature = "nightly")] extern crate rustc_plugin;
+#![cfg_attr(feature = "nightly", feature(proc_macro))]
 
 #[cfg(feature = "nightly")]
-#[plugin_registrar]
-pub fn plugin_registrar(reg: &mut rustc_plugin::Registry) {
-    reg.register_macro("command", plugin::expand_command);
-}
+extern crate command_macros_plugin;
+
+#[cfg(feature = "nightly")]
+pub use command_macros_plugin::command;
 
 /// Simple macro for creating `Command`.
 ///
@@ -303,27 +258,6 @@ macro_rules! cmd {
         }
     };
 
-    // (-flag)
-    (@stringify {}) => { "" };
-    (@stringify {- $($rest:tt)*}) => { concat!("-", cmd!(@stringify {$($rest)*})) };
-    (@stringify {+ $($rest:tt)*}) => { concat!("+", cmd!(@stringify {$($rest)*})) };
-    (@stringify {= $($rest:tt)*}) => { concat!("=", cmd!(@stringify {$($rest)*})) };
-    (@stringify {, $($rest:tt)*}) => { concat!(",", cmd!(@stringify {$($rest)*})) };
-    (@stringify {. $($rest:tt)*}) => { concat!(".", cmd!(@stringify {$($rest)*})) };
-    (@stringify {; $($rest:tt)*}) => { concat!(";", cmd!(@stringify {$($rest)*})) };
-    (@stringify {: $($rest:tt)*}) => { concat!(":", cmd!(@stringify {$($rest)*})) };
-    (@stringify {$i:ident $($rest:tt)*}) => {
-        // "soon'ah"
-        // stringify!($i)
-        concat!(stringify!($i), cmd!(@stringify {$($rest)*}))
-    };
-    ({$e:expr} (-$($tts:tt)*) $($tail:tt)*) => {
-        cmd!({$e} (cmd!(@stringify {-$($tts)*})) $($tail)*)
-    };
-    ({$e:expr} (+$($tts:tt)*) $($tail:tt)*) => {
-        cmd!({$e} (cmd!(@stringify {+$($tts)*})) $($tail)*)
-    };
-
     // arg splice
     ({$e:expr} ($a:expr) $($tail:tt)*) => 
     {
@@ -338,7 +272,7 @@ macro_rules! cmd {
     ({$e:expr} [$aa:expr] $($tail:tt)*) => {
         {
             let mut cmd = $e;
-            cmd.args(&$aa);
+            cmd.args($aa);
             cmd!( {cmd} $($tail)* )
         }
     };
@@ -431,9 +365,9 @@ fn ffmpeg() {
     let preset = "slow";
     let tmpname = "tmp.mkv";
     let output = cmd!(echo
-            (-i) (file)
-            (-c:v) libx264 (-preset) (preset) [moreargs]
-            (-c:a) copy
+            ("-i") (file)
+            ("-c:v") libx264 ("-preset") (preset) [&moreargs]
+            ("-c:a") copy
             (tmpname))
         .output()
         .expect("can't echo");
@@ -551,12 +485,3 @@ fn not_moving() {
     cmd!(((s)));
     cmd!((s));
 }
-
-#[test]
-fn flags() {
-    quicktest(
-        cmd!(echo (".") (-e) (-c:a=aac) (+a:b;c,d.txt)),
-        ". -e -c:a=aac +a:b;c,d.txt",
-    );
-}
-

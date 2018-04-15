@@ -1,23 +1,9 @@
-[package]
-name = "command-macros"
-version = "0.1.11"
-authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
+[workspace]
 
-description = "Macros for creating std::process::Command with shell-like syntax"
+members = [
+    "command-macros",
+    "command-macros-plugin",
+]
 
-documentation = "http://krdln.github.io/command-macros/command_macros/index.html"
-homepage = "https://github.com/krdln/command-macros"
-repository = "https://github.com/krdln/command-macros"
-readme = "README.md"
-keywords = ["command", "macro", "shell", "process", "dsl"]
-license = "MIT"
-build = "build.rs"
-
-[lib]
-crate-type = ["dylib", "lib"]
-
-[features]
-nightly = []
-
-[build-dependencies]
-rustc_version = "0.1"
+[patch.crates-io]
+command-macros-plugin = { path = "command-macros-plugin" }
