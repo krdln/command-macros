@@ -224,6 +224,43 @@ extern crate command_macros_plugin;
 #[cfg(feature = "nightly")]
 pub use command_macros_plugin::command;
 
+// Stub for displaying in documentation
+#[cfg(feature = "dox")]
+/// Full-featured macro for creating `Command`
+///
+/// This macro is available only with the "nightly" feature enabled.
+///
+/// Please read the syntax description in the crate's [documentation](index.html).
+///
+/// # Examples
+///
+/// ```ignore
+/// #![feature(proc_macro, proc_macro_non_items)]
+///
+/// extern crate command_macros;
+///
+/// use command_macros::command;
+///
+/// fn main() {
+///     command!(echo foo --bar ((2+2))=4).status().unwrap();
+///     // should echo: foo --bar 4=4
+/// }
+/// ```
+///
+/// # Stability
+///
+/// This is an experimental, nightly-only version of `cmd!` macro,
+/// so it might break with a nightly update from time to time.
+/// However, it uses a new `proc_macro` interface rather than
+/// compiler internals, so the breakage shouldn't occur too often.
+///
+/// In future, when the `proc_macro` interface is stabilized,
+/// this macro should work on stable without significant changes.
+#[macro_export]
+macro_rules! command {
+    ($($tt:tt)*) => { /* proc_macro */ }
+}
+
 /// Simple macro for creating `Command`.
 ///
 /// Please read the syntax description in the crate's [documentation](index.html).
