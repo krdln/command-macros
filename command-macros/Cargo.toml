@@ -1,11 +1,11 @@
 [package]
 name = "command-macros"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
 
 description = "Macros for creating std::process::Command with shell-like syntax"
 
-documentation = "https://docs.rs/command-macros/0.2.0/command_macros/"
+documentation = "https://docs.rs/command-macros/0.2.2/command_macros/"
 repository = "https://github.com/krdln/command-macros"
 readme = "README.md"
 keywords = ["command", "macro", "shell", "process", "dsl"]
