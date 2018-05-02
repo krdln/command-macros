@@ -1,6 +1,6 @@
 # command-macros
 
-![**documentation**](https://docs.rs/command-macros/badge.svg),
+[![**documentation**](https://docs.rs/command-macros/badge.svg)](https://docs.rs/command-macros),
 [**crate**](https://crates.io/crates/command-macros)
 
 Macros for creating [`std::process::Command`](https://static.rust-lang.org/doc/master/std/process/struct.Command.html)
