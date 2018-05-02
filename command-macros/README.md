@@ -95,7 +95,7 @@ Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies]
-command-macros = "0.1"
+command-macros = "0.2"
 ```
 
 And then add on top of your root module:
