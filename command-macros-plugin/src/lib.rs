@@ -24,8 +24,8 @@ use self::syntax::{
     Pat,
     Stmt,
     from_source,
-    new_term,
-    new_spanned_term,
+    new_ident,
+    new_spanned_ident,
     new_block,
     surround,
 };
@@ -255,7 +255,7 @@ fn generate(mut trees: Vec<Tree>) -> Result<Expr> {
         }
     };
 
-    let cmd_var: TokenTree = new_term("cmd");
+    let cmd_var: TokenTree = new_ident("cmd");
 
     let init_stmt = Stmt::new_let(&cmd_var, cmd_expr);
     let mut stmts: Vec<Stmt> = vec![init_stmt];
@@ -305,7 +305,7 @@ fn generate_args(cmd: &TokenTree, Spanned { elem: expr, span }: Spanned<Expr>) -
 }
 
 fn generate_for(cmd_var: &TokenTree, For { for_span, pat, in_tt, expr, block }: For) -> Result<Stmt> {
-    let stream = once(new_spanned_term("for", for_span))
+    let stream = once(new_spanned_ident("for", for_span))
         .chain(pat.0)
         .chain(once(in_tt))
         .chain(expr.into_stream())
@@ -325,10 +325,10 @@ fn generate_if(cmd_var: &TokenTree, If { if_span, cond, then_block, else_block }
                 .collect()
         }
     };
-    let stream = once(new_spanned_term("if", if_span))
+    let stream = once(new_spanned_ident("if", if_span))
         .chain(cond_stream)
         .chain(once(generate_block(cmd_var, then_block)?))
-        .chain(once(new_spanned_term("else", Span::call_site())))
+        .chain(once(new_spanned_ident("else", Span::call_site())))
         .chain(once(generate_block(cmd_var, else_block)?))
         .collect();
     Ok(Stmt::from_stream(stream))
@@ -343,7 +343,7 @@ fn generate_match(cmd_var: &TokenTree, Match { match_span, expr, block_span, arm
 
     let block = surround(arm_stream, Delimiter::Brace, block_span);
 
-    let stream = once(new_spanned_term("match", match_span))
+    let stream = once(new_spanned_ident("match", match_span))
         .chain(expr.into_stream())
         .chain(once(block))
         .collect();
@@ -395,7 +395,7 @@ fn generate_os_str(arg: Arg) -> Result<Expr> {
         Arg::Single(splice) => generate_splice(splice),
         Arg::Touching(splices) => {
             let os_string = Expr::from_source("::std::ffi::OsString::new()", full_span);
-            let buf_var = new_term("buf");
+            let buf_var = new_ident("buf");
             let init_stmt = Stmt::new_let(&buf_var, os_string);
             let mut stmts = vec![init_stmt];
 
@@ -508,10 +508,10 @@ impl Parser {
         match tt {
             TokenTree::Group(group) => Ok(Parser::parse_splice(group)?.into()),
 
-            TokenTree::Term(term) => {
+            TokenTree::Ident(ident) => {
                 let next_span = self.peek().map(|next| next.span());
 
-                let word = term.as_str();
+                let word = ident.to_string();
                 let warn_keyword = || {
                     if !is_separated_span(previous_span, span, next_span) {
                         span.warning(format!("Keyword `{}` not separated by whitespace", word))
@@ -521,7 +521,7 @@ impl Parser {
                     }
                 };
 
-                match word {
+                match word.as_str() {
                     "let" => {
                         warn_keyword();
                         span.error("Let statements are not supported")
@@ -549,25 +549,25 @@ impl Parser {
 
             TokenTree::Literal(lit) => Ok(Spanned(Splice::Literal(lit), span).into()),
 
-            TokenTree::Op(op) => {
-                match op.op() {
+            TokenTree::Punct(punct) => {
+                match punct.as_char() {
                     '$' => {
-                        op.span()
+                        punct.span()
                             .error("Dollar sign interpollation is not supported")
                             .help("To insert a variable, use `(var)` or `((var))`")
                             .emit();
                     }
                     '>' | '<' => {
-                        op.span().error("File redirection is not supported").emit();
+                        punct.span().error("File redirection is not supported").emit();
                     }
                     '|' => {
-                        op.span().error("Pipe redirection is not supported").emit();
+                        punct.span().error("Pipe redirection is not supported").emit();
                     }
                     '&' => {
-                        op.span().error("The `&` and `&&` operators are not supported").emit();
+                        punct.span().error("The `&` and `&&` operators are not supported").emit();
                     }
                     ';' => {
-                        op.span()
+                        punct.span()
                             .error("Unexpected semicolon")
                             .help("To interpret literally, surround in quotes")
                             .note("Semicolon is not needed in this macro")
@@ -620,11 +620,12 @@ impl Parser {
     }
 
     fn parse_if(&mut self, if_span: Span) -> Result<Tree> {
-        let cond = if self.is_term_next("let") {
+        let cond = if self.is_ident_next("let") {
             let let_tt = self.next().unwrap();
             let pat = Pat(self.parse_until(
                 |parser| match parser.peek() {
-                    Some(TokenTree::Op(op)) if op.op() == '=' && op.spacing() == Spacing::Alone => true,
+                    Some(TokenTree::Punct(punct))
+                        if punct.as_char() == '=' && punct.spacing() == Spacing::Alone => true,
                     _ => false,
                 },
                 "`=`",
@@ -638,11 +639,11 @@ impl Parser {
         };
         let then_block = self.parse_block()?;
 
-        let else_block = if self.is_term_next("else") {
+        let else_block = if self.is_ident_next("else") {
             let _ = self.next().unwrap();
             if self.is_block_next() {
                 self.parse_block()?
-            } else if self.is_term_next("if") {
+            } else if self.is_ident_next("if") {
                 let if_tt = self.next().unwrap();
                 let inner_if = self.parse_if(if_tt.span())?;
                 let inner_span = inner_if.span();
@@ -661,7 +662,7 @@ impl Parser {
     }
 
     fn parse_for(&mut self, for_span: Span) -> Result<Tree> {
-        let pat = Pat(self.parse_until_term("in", "a pattern")?);
+        let pat = Pat(self.parse_until_ident("in", "a pattern")?);
         let in_tt = self.next().unwrap();
         let expr = self.parse_until_block()?;
         let block = self.parse_block()?;
@@ -687,8 +688,8 @@ impl Parser {
         while !parser.stream.is_empty() {
             let pat = Pat(parser.parse_until(
                     |parser| match parser.peek_two() {
-                        Some((TokenTree::Op(left), TokenTree::Op(right)))
-                            if left.op() == '=' && right.op() == '>'
+                        Some((TokenTree::Punct(left), TokenTree::Punct(right)))
+                            if left.as_char() == '=' && right.as_char() == '>'
                                 && left.spacing() == Joint && right.spacing() == Alone => true,
                                     _ => false,
                     },
@@ -723,17 +724,17 @@ impl Parser {
         }
     }
 
-    fn is_term_next(&self, expected: &str) -> bool {
+    fn is_ident_next(&self, expected: &str) -> bool {
         match self.peek() {
-            Some(&TokenTree::Term(actual)) if actual.as_str() == expected => true,
+            Some(TokenTree::Ident(actual)) if actual.to_string() == expected => true,
             _ => false,
         }
     }
 
-    fn parse_until_term(&mut self, until_term: &str, what: &str) -> Result<TokenStream> {
+    fn parse_until_ident(&mut self, until_ident: &str, what: &str) -> Result<TokenStream> {
         self.parse_until(
-            |parser| parser.is_term_next(until_term),
-            &format!("`{}`", until_term),
+            |parser| parser.is_ident_next(until_ident),
+            &format!("`{}`", until_ident),
             what
         )
     }

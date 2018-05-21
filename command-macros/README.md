@@ -20,7 +20,7 @@ Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies.command-macros]
-version = "0.2.0"
+version = "0.2.3"
 features = ["nightly"]
 ```
 
@@ -32,6 +32,13 @@ extern crate command_macros;
 
 use command_macros::command;
 ```
+
+If you're not running the latest nightly, try the following versions:
+
+nightly date | command-macros version
+-------------------------------------
+2018-05-17 —            | 0.2.3
+2018-04-07 — 2018-05-16 | 0.2.2
 
 ### Examples
 

@@ -8,8 +8,8 @@ use proc_macro::{
     Group,
     Delimiter,
     Literal,
-    Op,
-    Term,
+    Punct,
+    Ident,
     Spacing,
 };
 
@@ -27,7 +27,7 @@ pub struct Stmt(TokenTree);
 impl Expr {
     pub fn into_stmt(self) -> Stmt {
         let stream = once(self.into_tt())
-            .chain(once(new_op(';')))
+            .chain(once(new_punct(';')))
             .collect();
         Stmt::from_stream(stream)
     }
@@ -114,8 +114,8 @@ impl Expr {
 
     pub fn call_method(caller: Expr, method: &str, arg: Expr, span: Span) -> Expr {
         let function = caller.grouped().into_stream().into_iter()
-            .chain(once(new_spanned_op('.', span)))
-            .chain(once(new_spanned_term(method, span)));
+            .chain(once(new_spanned_punct('.', span)))
+            .chain(once(new_spanned_ident(method, span)));
         Expr::call(function, arg, span)
     }
 
@@ -140,7 +140,7 @@ impl Expr {
     }
 
     pub fn reference(inner: Expr, span: Span) -> Expr {
-        let stream = once(new_spanned_op('&', span))
+        let stream = once(new_spanned_punct('&', span))
             .chain(inner.grouped().into_stream())
             .collect();
         Expr::from_stream(stream)
@@ -155,9 +155,9 @@ impl Stmt {
     pub fn new_let(var: &TokenTree, expr: Expr) -> Stmt {
         let stream = from_source("#[allow(unused)] let mut", Span::call_site())
             .chain(once(var.clone()))
-            .chain(once(new_op('=')))
+            .chain(once(new_punct('=')))
             .chain(expr.into_stream())
-            .chain(once(new_op(';')))
+            .chain(once(new_punct(';')))
             .collect();
         Stmt::from_stream(stream)
     }
@@ -177,24 +177,24 @@ pub fn from_source(source: &'static str, span: Span) -> impl Iterator<Item=Token
         .map(move |mut tt| { tt.set_span(span); tt })
 }
 
-pub fn new_op(op: char) -> TokenTree {
-    Op::new(op, Spacing::Alone).into()
+pub fn new_punct(punct: char) -> TokenTree {
+    Punct::new(punct, Spacing::Alone).into()
 }
 
-pub fn new_spanned_op(op: char, span: Span) -> TokenTree {
-    let mut op = Op::new(op, Spacing::Alone);
-    op.set_span(span);
-    op.into()
+pub fn new_spanned_punct(punct: char, span: Span) -> TokenTree {
+    let mut punct = Punct::new(punct, Spacing::Alone);
+    punct.set_span(span);
+    punct.into()
 }
 
-pub fn new_term(word: &str) -> TokenTree {
-    Term::new(word, Span::def_site()).into()
+pub fn new_ident(word: &str) -> TokenTree {
+    Ident::new(word, Span::def_site()).into()
 }
 
-pub fn new_spanned_term(word: &str, span: Span) -> TokenTree {
-    let mut term = Term::new(word, Span::def_site());
-    term.set_span(span);
-    term.into()
+pub fn new_spanned_ident(word: &str, span: Span) -> TokenTree {
+    let mut ident = Ident::new(word, Span::def_site());
+    ident.set_span(span);
+    ident.into()
 }
 
 pub fn new_block(stmts: Vec<Stmt>, span: Span) -> TokenTree {
