@@ -1,6 +1,11 @@
 # Changelog
 
-# 0.2.0 — 2017-05-02
+# 0.2.3 — 2018-05-21
+
+* Update for the latest nightly
+* Remove explicit link to documentation
+
+# 0.2.0 — 2018-05-02
 
 * Reimplemented `command` using new `proc_macro`
 * Moved `command` macro impl to separate crate

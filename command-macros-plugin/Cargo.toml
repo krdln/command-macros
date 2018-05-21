@@ -1,11 +1,10 @@
 [package]
 name = "command-macros-plugin"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
 
 description = "Implementation crate for command-macros"
 
-documentation = "https://docs.rs/command-macros-plugin/0.2.0/command_macros_plugin/"
 repository = "https://github.com/krdln/command-macros"
 readme = "README.md"
 license = "MIT"
