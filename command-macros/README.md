@@ -36,7 +36,7 @@ use command_macros::command;
 If you're not running the latest nightly, try the following versions:
 
 nightly date | command-macros version
--------------------------------------
+-------------|-----------------------
 2018-05-17 —            | 0.2.3
 2018-04-07 — 2018-05-16 | 0.2.2
 
