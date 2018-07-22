@@ -1,4 +1,4 @@
-#![feature(proc_macro, external_doc)]
+#![feature(proc_macro_span, proc_macro_diagnostic, external_doc)]
 
 #![doc(include = "../README.md")]
 
@@ -46,7 +46,7 @@ type Result<T> = ::std::result::Result<T, ()>;
 /// # Examples
 ///
 /// ```
-/// #![feature(proc_macro, proc_macro_non_items)]
+/// #![feature(use_extern_macros, proc_macro_non_items)]
 ///
 /// // also reexported in extern crate command_macros;
 /// extern crate command_macros_plugin;

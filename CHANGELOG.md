@@ -1,5 +1,15 @@
 # Changelog
 
+# 0.2.4 — 2018-05-22
+
+Update for the latest nightly due to stabilization of
+`proc_macro` feature:
+
+* `proc_macro` feature is no longer needed
+* `use_extern_macros` is now needed instead
+* Not the whole `proc_macro` API was stabilized, so implementation
+  uses `proc_macro_span` and `proc_macro_diagnostics` features.
+
 # 0.2.3 — 2018-05-21
 
 * Update for the latest nightly

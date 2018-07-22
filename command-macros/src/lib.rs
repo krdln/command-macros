@@ -216,7 +216,7 @@
 //! ).status().unwrap()
 //! ```
 
-#![cfg_attr(feature = "nightly", feature(proc_macro))]
+#![cfg_attr(feature = "nightly", feature(use_extern_macros))]
 
 #[cfg(feature = "nightly")]
 extern crate command_macros_plugin;
@@ -235,7 +235,7 @@ pub use command_macros_plugin::command;
 /// # Examples
 ///
 /// ```ignore
-/// #![feature(proc_macro, proc_macro_non_items)]
+/// #![feature(use_extern_macros, proc_macro_non_items)]
 ///
 /// extern crate command_macros;
 ///

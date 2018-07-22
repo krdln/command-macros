@@ -1,4 +1,4 @@
-#![feature(proc_macro, proc_macro_non_items)]
+#![feature(use_extern_macros, proc_macro_non_items)]
 
 extern crate command_macros_plugin;
 

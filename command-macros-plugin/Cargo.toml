@@ -1,6 +1,6 @@
 [package]
 name = "command-macros-plugin"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Michał Krasnoborski <mkrdln@gmail.com>"]
 
 description = "Implementation crate for command-macros"

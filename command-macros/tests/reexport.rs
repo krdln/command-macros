@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "nightly", feature(proc_macro, proc_macro_non_items))]
+#![cfg_attr(feature = "nightly", feature(use_extern_macros, proc_macro_non_items))]
 
 #[cfg(feature = "nightly")] extern crate command_macros;
 
