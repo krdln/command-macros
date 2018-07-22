@@ -12,6 +12,8 @@ but requires nightly, and a simpler [`cmd!()`](#cmd), built by `macro_rules`.
 
 ## `command!`
 
+[![Build Status](https://travis-ci.org/krdln/command-macros.svg?branch=master)](https://travis-ci.org/krdln/command-macros)
+
 ### Installation
 
 This macro requires nightly Rust and
