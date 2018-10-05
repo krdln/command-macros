@@ -1,6 +1,13 @@
 # Changelog
 
-# 0.2.4 — 2018-05-22
+# 0.2.5 — 2018-10-05
+
+Update for the latest nightly:
+
+* `Span::def_site` now requires separate `proc_macro_def_site` feature gate
+* `use_extern_macros` is no longer needed (since 1.30)
+
+# 0.2.4 — 2018-07-22
 
 Update for the latest nightly due to stabilization of
 `proc_macro` feature:

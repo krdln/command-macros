@@ -22,7 +22,7 @@ Put the following in your `Cargo.toml`.
 
 ```toml
 [dependencies.command-macros]
-version = "0.2.4"
+version = "0.2.5"
 features = ["nightly"]
 ```
 
@@ -39,7 +39,8 @@ If you're not running the latest nightly, try the following versions:
 
 nightly date | command-macros version
 -------------|-----------------------
-2018-07-17 —            | 0.2.4
+2018-10-04 —            | 0.2.5
+2018-07-17 — 2018-10-03 | 0.2.4
 2018-05-17 — 2018-07-16 | 0.2.3
 2018-04-07 — 2018-05-16 | 0.2.2
 
