@@ -28,7 +28,7 @@ features = ["nightly"]
 
 And then add on top of your root module:
 ```rust
-#![feature(use_extern_macros, proc_macro_non_items)]
+#![feature(proc_macro_non_items)]
 
 extern crate command_macros;
 
