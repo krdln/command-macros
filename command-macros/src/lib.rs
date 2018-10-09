@@ -233,7 +233,7 @@ pub use command_macros_plugin::command;
 /// # Examples
 ///
 /// ```ignore
-/// #![feature(proc_macro_non_items)]
+/// #![feature(proc_macro_hygiene)]
 ///
 /// extern crate command_macros;
 ///

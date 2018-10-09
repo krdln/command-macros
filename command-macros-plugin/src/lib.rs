@@ -46,7 +46,7 @@ type Result<T> = ::std::result::Result<T, ()>;
 /// # Examples
 ///
 /// ```
-/// #![feature(proc_macro_non_items)]
+/// #![feature(proc_macro_hygiene)]
 ///
 /// // also reexported in extern crate command_macros;
 /// extern crate command_macros_plugin;

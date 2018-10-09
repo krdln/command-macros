@@ -1,5 +1,11 @@
 # Changelog
 
+# 0.2.6 — 2018-10-09
+
+Update for the latest nightly:
+
+* `proc_macro_non_items` feature gate changed to `proc_macro_hygiene`
+
 # 0.2.5 — 2018-10-05
 
 Update for the latest nightly:
