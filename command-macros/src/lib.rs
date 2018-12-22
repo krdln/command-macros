@@ -13,7 +13,7 @@
 //! ## Naked idents
 //!
 //! First ident is treated as command name,
-//! the rest are parsed as arugments. This invocation:
+//! the rest are parsed as arguments. This invocation:
 //!
 //! ```
 //! # #[macro_use] extern crate command_macros;
