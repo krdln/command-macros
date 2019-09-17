@@ -287,6 +287,8 @@ macro_rules! cmd {
     ({$e:expr} (($a:expr)) $($tail:tt)*) =>
     {
         {
+            // Allowing unused mut in case `$e` is of type `&mut Command`
+            #[allow(unused_mut)]
             let mut cmd = $e;
             cmd.arg((&$a).to_string());
             cmd!( {cmd} $($tail)* )
@@ -297,6 +299,7 @@ macro_rules! cmd {
     ({$e:expr} ($a:expr) $($tail:tt)*) => 
     {
         {
+            #[allow(unused_mut)]
             let mut cmd = $e;
             cmd.arg(&$a);
             cmd!( {cmd} $($tail)* )
@@ -306,6 +309,7 @@ macro_rules! cmd {
     // args splice
     ({$e:expr} [$aa:expr] $($tail:tt)*) => {
         {
+            #[allow(unused_mut)]
             let mut cmd = $e;
             cmd.args($aa);
             cmd!( {cmd} $($tail)* )
@@ -355,6 +359,7 @@ macro_rules! cmd {
     // for
     ({$e:expr} for $p:pat in ($i:expr) { $($body:tt)* } $($tail:tt)*) => {
         {
+            #[allow(unused_mut)]
             let mut cmd = $e;
             for $p in $i { cmd = cmd!( {cmd} $($body)* ); }
             cmd
