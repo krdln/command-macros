@@ -89,7 +89,10 @@ impl Expr {
                 let mut stream = stream.clone().into_iter();
                 let span = stream.next().unwrap().span();
                 if let Some(last) = stream.last() {
-                    span.join(last.span()).unwrap()
+                    // If join fails, one of the spans is most likely def_site.
+                    // There's no good choice in picking span of the whole expression then,
+                    // so we pick _something_.
+                    span.join(last.span()).unwrap_or_else(|| last.span())
                 } else {
                     span
                 }

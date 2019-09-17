@@ -1,5 +1,11 @@
 # Changelog
 
+# 0.2.7 — 2019-09-16
+
+* Update for the latest nightly: Fix panic in span calculation. The fix is
+  compatible with older nightlies too.
+* Fix `unused_mut` warning in `cmd!` macro.
+
 # 0.2.6 — 2018-10-09
 
 Update for the latest nightly:
