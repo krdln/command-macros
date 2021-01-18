@@ -4,5 +4,5 @@ rust:
 script:
   - cargo build --verbose
   - cargo test --package command-macros-plugin --verbose
-  - cargo test -Z package-features --features nightly --package command-macros --verbose
+  - cargo test --features nightly --package command-macros --verbose
 cache: cargo
