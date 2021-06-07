@@ -1,6 +1,6 @@
 #![feature(proc_macro_span, proc_macro_diagnostic, proc_macro_def_site, external_doc)]
 
-#![doc(include = "../README.md")]
+#![doc = include_str!("../README.md")]
 
 extern crate proc_macro;
 extern crate itertools;

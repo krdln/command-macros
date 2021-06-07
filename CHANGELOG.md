@@ -1,5 +1,9 @@
 # Changelog
 
+# 0.2.8 — 2021-06-07
+
+* Update for the latest nightly: Stop using deprecated syntax for external doc.
+
 # 0.2.7 — 2019-09-16
 
 * Update for the latest nightly: Fix panic in span calculation. The fix is
