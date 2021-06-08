@@ -1,4 +1,4 @@
-#![feature(proc_macro_span, proc_macro_diagnostic, proc_macro_def_site, external_doc)]
+#![feature(proc_macro_span, proc_macro_diagnostic, proc_macro_def_site)]
 
 #![doc = include_str!("../README.md")]
 

@@ -1,6 +1,6 @@
 # Changelog
 
-# 0.2.8 — 2021-06-07
+# 0.2.9 — 2021-06-08
 
 * Update for the latest nightly: Stop using deprecated syntax for external doc.
 
